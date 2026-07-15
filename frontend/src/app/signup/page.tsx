@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { signupSchema, type SignupInput } from "@/lib/schemas";
 import { AuthCard } from "@/components/auth/auth-card";
@@ -17,6 +17,7 @@ export default function SignupPage() {
   const { signup } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<SignupInput>({ resolver: zodResolver(signupSchema) });
 
   async function onSubmit(v: SignupInput) {
@@ -42,7 +43,13 @@ export default function SignupPage() {
         </div>
         <div className="space-y-1.5">
           <Label>Password</Label>
-          <Input type="password" placeholder="Min 8 characters" {...register("password")} />
+          <div className="relative">
+            <Input type={showPw ? "text" : "password"} placeholder="Min 8 characters" className="pr-10" {...register("password")} />
+            <button type="button" onClick={() => setShowPw((v) => !v)} aria-label="Toggle password visibility"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         </div>
         <Button type="submit" className="w-full" disabled={loading}>

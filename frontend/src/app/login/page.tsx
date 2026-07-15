@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
 import { AuthCard } from "@/components/auth/auth-card";
@@ -17,6 +17,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
 
   async function onSubmit(v: LoginInput) {
@@ -32,19 +33,24 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
           <Label>Email</Label>
-          <Input type="email" placeholder="you@example.com" {...register("email")} />
+          <Input type="email" {...register("email")} />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
         <div className="space-y-1.5">
           <Label>Password</Label>
-          <Input type="password" placeholder="••••••••" {...register("password")} />
+          <div className="relative">
+            <Input type={showPw ? "text" : "password"} className="pr-10" {...register("password")} />
+            <button type="button" onClick={() => setShowPw((v) => !v)} aria-label="Toggle password visibility"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
           {loading && <Loader2 className="h-4 w-4 animate-spin" />} Log in
         </Button>
       </form>
-      <p className="mt-4 text-center text-xs text-muted-foreground">Demo: demo@realtyiq.dev / Demo@12345</p>
     </AuthCard>
   );
 }
