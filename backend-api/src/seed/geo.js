@@ -1,6 +1,3 @@
-// Approximate coordinates for common Bengaluru localities. Unknown localities
-// fall back to the city centre with a small deterministic jitter so map pins
-// don't stack. Coordinates are illustrative, not survey-accurate.
 export const LOCALITY_GEO = {
   "Whitefield": { lat: 12.9698, lng: 77.7500 },
   "Electronic City": { lat: 12.8452, lng: 77.6602 },

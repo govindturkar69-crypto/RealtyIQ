@@ -1,7 +1,7 @@
 import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DATASET = os.getenv("DATASET", "bengaluru")   # "bengaluru" | "synthetic"
+DATASET = os.getenv("DATASET", "bengaluru")
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 MODEL_PATH = os.path.join(MODELS_DIR, "model.joblib")
 METADATA_PATH = os.path.join(MODELS_DIR, "metadata.json")

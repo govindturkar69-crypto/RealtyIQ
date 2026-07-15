@@ -1,4 +1,3 @@
-"""Dependency-free pipeline tests (numpy/pandas only). Run: python verify/test_pipeline.py"""
 import os, sys, math
 import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))

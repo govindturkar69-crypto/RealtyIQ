@@ -6,9 +6,8 @@ import pandas as pd
 import joblib
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-import config as C  # noqa: E402
-import features as F  # noqa: E402
-
+import config as C
+import features as F
 
 class Predictor:
     def __init__(self):

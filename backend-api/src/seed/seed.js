@@ -40,7 +40,7 @@ function descriptionFor(row, ptype, price) {
 }
 
 function spreadDate(i, total) {
-  const monthsAgo = Math.floor((i / total) * 24); // 0..24 months back
+  const monthsAgo = Math.floor((i / total) * 24);
   const d = new Date();
   d.setMonth(d.getMonth() - (24 - monthsAgo));
   d.setDate(1 + (i % 27));

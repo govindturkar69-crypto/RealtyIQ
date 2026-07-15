@@ -4,11 +4,7 @@ from pydantic import BaseModel, Field, field_validator
 AREA_TYPES = ["Super built-up Area", "Built-up Area", "Plot Area", "Carpet Area"]
 AVAILABILITY = ["Ready To Move", "Under Construction"]
 
-
 class PredictionRequest(BaseModel):
-    """Bengaluru schema (active dataset). Location is a free string validated
-    against the model's known localities at inference (unknowns handled by the
-    encoder's ignore policy)."""
     location: str = Field(..., examples=["Whitefield"])
     area_type: str = Field("Super built-up Area")
     availability_status: str = Field("Ready To Move")
@@ -31,7 +27,6 @@ class PredictionRequest(BaseModel):
             raise ValueError(f"availability_status must be one of {AVAILABILITY}")
         return v
 
-
 class PredictionResponse(BaseModel):
     predicted_price: int
     confidence_low: int
@@ -41,11 +36,9 @@ class PredictionResponse(BaseModel):
     currency: str = "INR"
     model_name: str
 
-
 class FeatureImportanceItem(BaseModel):
     feature: str
     importance: float
-
 
 class HealthResponse(BaseModel):
     status: str

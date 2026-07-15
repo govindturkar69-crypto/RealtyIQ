@@ -47,7 +47,6 @@ export const localityOptions = asyncHandler(async (req, res) => {
   res.json({ localities: localities.sort() });
 });
 
-
 export const listingDeal = asyncHandler(async (req, res) => {
   const listing = await Listing.findById(req.params.id).lean();
   if (!listing) throw ApiError.notFound("Listing not found");

@@ -9,8 +9,6 @@ const DEV_FALLBACKS = {
   JWT_REFRESH_SECRET: "dev_refresh_secret_change_me",
 };
 
-// In production a missing critical secret is fatal — the app refuses to start.
-// In development we fall back to safe local defaults for convenience.
 function required(key) {
   const val = process.env[key];
   if (val && val.trim()) {

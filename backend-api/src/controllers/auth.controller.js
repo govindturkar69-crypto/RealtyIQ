@@ -59,7 +59,6 @@ export const logout = asyncHandler(async (req, res) => {
   res.json({ success: true });
 });
 
-
 export const deleteAccount = asyncHandler(async (req, res) => {
   const userId = req.user.sub;
   await Promise.all([

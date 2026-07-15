@@ -26,7 +26,7 @@ export const compare = asyncHandler(async (req, res) => {
           predictedPrice: p.predicted_price, confidenceLow: p.confidence_low,
           confidenceHigh: p.confidence_high, pricePerSqft: p.price_per_sqft, modelName: p.model_name,
         });
-      } catch { /* ML optional in compare */ }
+      } catch {  }
       const deal = predicted ? computeDealVerdict(l.price, predicted.predicted_price) : { verdict: "unknown", deltaPct: null };
       return {
         listing: l,

@@ -1,27 +1,18 @@
-"""Dependency-free (numpy/pandas only) verification model.
-
-Real histogram gradient-boosted-trees regressor (vectorized prediction +
-per-node feature subsampling) trained on the active dataset with the SAME
-cleaning, feature engineering and split as the production sklearn pipeline.
-Purpose: genuinely computed R2/MAE/RMSE where sklearn/xgboost cannot be
-installed. Production model lives in src/train.py."""
 import os
 import sys
 import json
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-import features as F  # noqa: E402
+import features as F
 
 SEED = 42
-
 
 def train_test_split(X, y, test_size=0.2, seed=SEED):
     rng = np.random.default_rng(seed)
     idx = rng.permutation(len(X))
     cut = int(len(X) * (1 - test_size))
     return X[idx[:cut]], X[idx[cut:]], y[idx[:cut]], y[idx[cut:]]
-
 
 def metrics(y_true, y_pred):
     err = y_true - y_pred
@@ -33,7 +24,6 @@ def metrics(y_true, y_pred):
         "rmse": float(np.sqrt(np.mean(err ** 2))),
         "mape": float(np.mean(np.abs(err) / np.clip(np.abs(y_true), 1, None)) * 100),
     }
-
 
 class _Tree:
     def __init__(self, max_depth, min_leaf, l2, colsample, rng):
@@ -108,7 +98,6 @@ class _Tree:
             node = np.where(active, nxt, node)
         return self.val[node]
 
-
 class HistGBT:
     def __init__(self, n_estimators=250, max_depth=4, lr=0.06, max_bins=64,
                  min_leaf=25, l2=1.0, colsample=0.3, seed=SEED):
@@ -147,7 +136,6 @@ class HistGBT:
             pred += self.lr * tree.predict(Xb)
         return pred
 
-
 class LinearBaseline:
     def fit(self, X, y):
         self.w, *_ = np.linalg.lstsq(np.hstack([np.ones((len(X), 1)), X]), y, rcond=None)
@@ -155,7 +143,6 @@ class LinearBaseline:
 
     def predict(self, X):
         return np.hstack([np.ones((len(X), 1)), X]) @ self.w
-
 
 def permutation_importance(model, X, y, cols, seed=SEED):
     rng = np.random.default_rng(seed)
@@ -167,7 +154,6 @@ def permutation_importance(model, X, y, cols, seed=SEED):
         imp[c] = base - metrics(y, model.predict(Xp))["r2"]
     return imp
 
-
 def collapse_dummies(imp):
     out = {}
     for cat in F.CATEGORICAL_FEATURES:
@@ -176,7 +162,6 @@ def collapse_dummies(imp):
         if not any(k.startswith(c + "_") for c in F.CATEGORICAL_FEATURES):
             out[k] = float(v)
     return dict(sorted(out.items(), key=lambda kv: kv[1], reverse=True))
-
 
 SAMPLES = {
     "bengaluru": [
@@ -192,14 +177,12 @@ SAMPLES = {
     ],
 }
 
-
 def _enums(clean_df):
     cat = {c: sorted(clean_df[c].dropna().astype(str).unique().tolist())
            for c in F.PROFILE.categorical}
     num = {c: {"min": float(clean_df[c].min()), "max": float(clean_df[c].max()),
                "median": float(clean_df[c].median())} for c in F.PROFILE.numeric}
     return {"categorical": cat, "numeric_ranges": num}
-
 
 def run():
     Z = 1.96
@@ -264,7 +247,6 @@ def run():
     with open(mp, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
     return out
-
 
 if __name__ == "__main__":
     print(json.dumps(run(), indent=2))

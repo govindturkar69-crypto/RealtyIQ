@@ -25,6 +25,6 @@ export function requireRole(...roles) {
 export function optionalAuth(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-  if (token) { try { req.user = verifyAccessToken(token); } catch { /* ignore */ } }
+  if (token) { try { req.user = verifyAccessToken(token); } catch {  } }
   next();
 }

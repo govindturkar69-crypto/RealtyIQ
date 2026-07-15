@@ -1,7 +1,3 @@
-"""Dataset profiles. Each profile knows how to clean its raw schema, remove
-outliers and engineer features, and declares which columns feed the model.
-Adding a dataset = adding one profile here; train.py / features.py /
-predictor.py stay dataset-agnostic."""
 import os
 import re
 from dataclasses import dataclass
@@ -10,7 +6,6 @@ import numpy as np
 import pandas as pd
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-
 
 @dataclass
 class DatasetProfile:
@@ -42,14 +37,9 @@ class DatasetProfile:
     def feature_columns(self):
         return self.numeric_features + self.categorical_features
 
-
-# --------------------------------------------------------------------------- #
-# Synthetic profile
-# --------------------------------------------------------------------------- #
 _AGE_BUCKETS = [(-1, 2, "New"), (2, 7, "Recent"), (7, 15, "Established"), (15, 100, "Old")]
 _SYN_RAW_NUM = ["area_sqft", "bhk", "bathrooms", "floor_no", "total_floors", "age_years",
                 "parking", "gym", "pool", "security", "schools_score", "hospitals_score"]
-
 
 def _syn_clean(df):
     df = df.copy().drop_duplicates()
@@ -61,7 +51,6 @@ def _syn_clean(df):
     df.loc[df["total_floors"] < df["floor_no"], "total_floors"] = df["floor_no"]
     return df.reset_index(drop=True)
 
-
 def _syn_outliers(df, k=1.5):
     df = df.copy()
     df["_p"] = df["price"] / df["area_sqft"]
@@ -72,13 +61,11 @@ def _syn_outliers(df, k=1.5):
         keep.loc[g.index] = g["_p"].between(q1 - k * iqr, q3 + k * iqr)
     return df[keep].drop(columns="_p").reset_index(drop=True)
 
-
 def _syn_bucket(a):
     for lo, hi, lab in _AGE_BUCKETS:
         if lo < a <= hi:
             return lab
     return "Old"
-
 
 def _syn_engineer(df):
     df = df.copy()
@@ -93,7 +80,6 @@ def _syn_engineer(df):
     df["age_bucket"] = df["age_years"].apply(_syn_bucket)
     return df
 
-
 SYNTHETIC = DatasetProfile(
     name="synthetic", raw_filename="housing_raw.csv", target="price",
     numeric=_SYN_RAW_NUM,
@@ -105,14 +91,9 @@ SYNTHETIC = DatasetProfile(
     area_col="area_sqft",
 )
 
-
-# --------------------------------------------------------------------------- #
-# Bengaluru profile (Kaggle: Bengaluru_House_Data.csv)
-# --------------------------------------------------------------------------- #
 _SQFT_UNITS = {"sq. meter": 10.7639, "sq.meter": 10.7639, "sq. yards": 9.0,
                "sq.yards": 9.0, "perch": 272.25, "acres": 43560.0,
                "guntha": 1089.0, "cents": 435.6, "grounds": 2400.0}
-
 
 def _parse_sqft(x):
     if pd.isna(x):
@@ -131,7 +112,6 @@ def _parse_sqft(x):
     except ValueError:
         return np.nan
 
-
 def _beng_clean(df):
     df = df.copy()
     df["area_type"] = df["area_type"].str.replace(r"\s+", " ", regex=True).str.strip()
@@ -143,7 +123,7 @@ def _beng_clean(df):
     df["bath"] = pd.to_numeric(df["bath"], errors="coerce")
     df["balcony"] = pd.to_numeric(df["balcony"], errors="coerce").fillna(0)
     df["location"] = df["location"].fillna("other").str.strip()
-    df["price"] = pd.to_numeric(df["price"], errors="coerce") * 1e5  # lakhs -> INR
+    df["price"] = pd.to_numeric(df["price"], errors="coerce") * 1e5
 
     df = df.dropna(subset=["total_sqft", "bhk", "bath", "price"])
     df = df[(df["total_sqft"] > 0) & (df["bhk"] > 0) & (df["price"] > 0)]
@@ -156,7 +136,6 @@ def _beng_clean(df):
     keep = ["location", "area_type", "availability_status", "total_sqft",
             "bhk", "bath", "balcony", "price"]
     return df[keep].reset_index(drop=True)
-
 
 def _beng_outliers(df):
     df = df.copy()
@@ -172,13 +151,11 @@ def _beng_outliers(df):
     keep &= df["_ppsf"].between(lo, hi)
     return df[keep].drop(columns="_ppsf").reset_index(drop=True)
 
-
 def _beng_engineer(df):
     df = df.copy()
     df["sqft_per_bhk"] = df["total_sqft"] / df["bhk"]
     df["bath_per_bhk"] = df["bath"] / df["bhk"]
     return df
-
 
 BENGALURU = DatasetProfile(
     name="bengaluru", raw_filename="Bengaluru_House_Data.csv", target="price",
@@ -191,7 +168,6 @@ BENGALURU = DatasetProfile(
 )
 
 REGISTRY = {p.name: p for p in (SYNTHETIC, BENGALURU)}
-
 
 def get_profile(name):
     if name not in REGISTRY:

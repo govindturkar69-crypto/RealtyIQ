@@ -1,9 +1,3 @@
-"""Production training pipeline (dataset-aware): cleaning -> outlier removal ->
-feature engineering -> split -> model training (RandomForest, GradientBoosting,
-XGBoost) -> GridSearchCV tuning -> CV-based selection -> evaluation (R2/MAE/RMSE)
--> joblib persistence + metadata + markdown report.
-
-Usage: python src/train.py --dataset bengaluru   (or synthetic)"""
 import os
 import sys
 import json
@@ -16,14 +10,11 @@ import joblib
 sys.path.insert(0, os.path.dirname(__file__))
 warnings.filterwarnings("ignore")
 
-
 def _log(y):
     return np.log1p(y)
 
-
 def _exp(y):
     return np.expm1(y)
-
 
 def build_preprocessor(F):
     from sklearn.compose import ColumnTransformer
@@ -33,13 +24,11 @@ def build_preprocessor(F):
         ("cat", OneHotEncoder(handle_unknown="ignore"), F.CATEGORICAL_FEATURES),
     ], remainder="drop")
 
-
 def make_pipeline(F, estimator):
     from sklearn.pipeline import Pipeline
     from sklearn.compose import TransformedTargetRegressor
     reg = TransformedTargetRegressor(regressor=estimator, func=np.log1p, inverse_func=np.expm1)
     return Pipeline([("prep", build_preprocessor(F)), ("model", reg)])
-
 
 def candidate_models(C):
     from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -68,14 +57,12 @@ def candidate_models(C):
         print("[warn] xgboost not installed; training RF + GBR only.")
     return models
 
-
 def evaluate(y_true, y_pred):
     from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
     return {"r2": float(r2_score(y_true, y_pred)),
             "mae": float(mean_absolute_error(y_true, y_pred)),
             "rmse": float(np.sqrt(mean_squared_error(y_true, y_pred))),
             "mape": float(np.mean(np.abs((y_true - y_pred) / np.clip(y_true, 1, None))) * 100)}
-
 
 def feature_importance(pipeline):
     prep = pipeline.named_steps["prep"]
@@ -86,14 +73,12 @@ def feature_importance(pipeline):
     pairs = sorted(zip(names, est.feature_importances_), key=lambda kv: kv[1], reverse=True)
     return {n.split("__", 1)[-1]: float(v) for n, v in pairs[:20]}
 
-
 def enums_from_clean(F, clean_df):
     cat = {c: sorted(clean_df[c].dropna().astype(str).unique().tolist())
            for c in F.PROFILE.categorical}
     num = {c: {"min": float(clean_df[c].min()), "max": float(clean_df[c].max()),
                "median": float(clean_df[c].median())} for c in F.PROFILE.numeric}
     return {"categorical": cat, "numeric_ranges": num}
-
 
 def write_report(C, F, md):
     lines = ["# Model Evaluation Report\n",
@@ -113,7 +98,6 @@ def write_report(C, F, md):
         lines.append(f"| {k} | {v:.4f} |")
     with open(os.path.join(C.REPORTS_DIR, "model_evaluation.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
-
 
 def main():
     ap = argparse.ArgumentParser()
@@ -170,7 +154,6 @@ def main():
         json.dump(meta, f, indent=2)
     print(f"\nBest model: {best_name} -> {C.MODEL_PATH}")
     write_report(C, F, meta)
-
 
 if __name__ == "__main__":
     main()

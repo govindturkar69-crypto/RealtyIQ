@@ -1,5 +1,3 @@
-"""Synthetic Indian housing dataset generator (Nagpur/Pune/Mumbai). Kept as an
-alternative to the Kaggle Bengaluru dataset. Run: python data/generate_dataset.py"""
 import argparse
 import os
 import numpy as np
@@ -20,7 +18,6 @@ PROPERTY_TYPES = ["Apartment", "Villa", "Plot"]
 FURNISHING = ["Unfurnished", "Semi-Furnished", "Furnished"]
 FURNISHING_MULT = {"Unfurnished": 1.0, "Semi-Furnished": 1.06, "Furnished": 1.13}
 TYPE_MULT = {"Apartment": 1.0, "Villa": 1.28, "Plot": 0.72}
-
 
 def generate(n_rows, seed=RNG_SEED):
     rng = np.random.default_rng(seed)
@@ -69,7 +66,6 @@ def generate(n_rows, seed=RNG_SEED):
     nulls = rng.choice(df.index, size=int(len(df) * 0.015), replace=False)
     df.loc[nulls, "furnishing"] = np.nan
     return df.sample(frac=1.0, random_state=seed).reset_index(drop=True)
-
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

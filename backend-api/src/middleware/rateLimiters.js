@@ -9,8 +9,6 @@ export const apiLimiter = rateLimit({
   message: { error: "Too many requests, please try again later" },
 });
 
-// Stricter limit on auth endpoints (brute-force protection). Only failed
-// attempts count toward the limit so normal logins aren't penalised.
 export const authLimiter = rateLimit({
   windowMs: env.authRateLimit.windowMs,
   max: env.authRateLimit.max,
