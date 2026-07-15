@@ -38,7 +38,7 @@
 | 🧠 **ML Service** | [realtyiq-ml.onrender.com](https://realtyiq-ml.onrender.com) | FastAPI · Render |
 | 🗄️ **Database** | MongoDB Atlas | Cloud |
 
-> **Demo login** — `demo@realtyiq.dev` / `Demo@12345` &nbsp;·&nbsp; **Admin** — `admin@realtyiq.dev` / `Admin@12345`
+> **Demo login** — `demo@realtyiq.dev` / `Demo@12345`
 >
 > ⏳ Free-tier services sleep after ~15 min idle; the first request may take ~30s to wake.
 
