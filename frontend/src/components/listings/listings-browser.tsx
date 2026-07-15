@@ -11,7 +11,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SaveSearchButton } from "./save-search-button";
 
-const EMPTY: ListingFilters = { search: "", locality: "", propertyType: "", bhk: "", minPrice: "", maxPrice: "", sort: "newest" };
+const EMPTY: ListingFilters = { search: "", locality: "", propertyType: "", bhk: "", bath: "", availabilityStatus: "", minSqft: "", maxSqft: "", minPrice: "", maxPrice: "", sort: "newest" };
 
 export function ListingsBrowser() {
   const params = useSearchParams();
@@ -32,6 +32,10 @@ export function ListingsBrowser() {
     if (filters.locality) p.set("locality", filters.locality);
     if (filters.propertyType) p.set("propertyType", filters.propertyType);
     if (filters.bhk) p.set("bhk", filters.bhk);
+    if (filters.bath) p.set("bath", filters.bath);
+    if (filters.availabilityStatus) p.set("availabilityStatus", filters.availabilityStatus);
+    if (filters.minSqft) p.set("minSqft", filters.minSqft);
+    if (filters.maxSqft) p.set("maxSqft", filters.maxSqft);
     if (filters.minPrice) p.set("minPrice", filters.minPrice);
     if (filters.maxPrice) p.set("maxPrice", filters.maxPrice);
     p.set("sort", filters.sort);

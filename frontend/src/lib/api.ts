@@ -70,4 +70,9 @@ export const api = {
   updateListing: (id: string, b: unknown) => apiFetch(`/api/listings/${id}`, { method: "PATCH", body: JSON.stringify(b) }),
   deleteListing: (id: string) => apiFetch(`/api/listings/${id}`, { method: "DELETE" }),
   markSavedNotified: (id: string) => apiFetch(`/api/saved-searches/${id}/mark-notified`, { method: "POST" }),
+  favorites: () => apiFetch("/api/favorites"),
+  favoriteIds: () => apiFetch("/api/favorites/ids"),
+  addFavorite: (id: string) => apiFetch(`/api/favorites/${id}`, { method: "POST" }),
+  removeFavorite: (id: string) => apiFetch(`/api/favorites/${id}`, { method: "DELETE" }),
+  getPrediction: (id: string) => apiFetch(`/api/predict/${id}`),
 };

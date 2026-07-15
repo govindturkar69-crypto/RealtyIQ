@@ -12,6 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PriceTrendChart } from "@/components/charts/price-trend-chart";
+import { EmiCalculator } from "@/components/emi-calculator";
+import { RecentlyViewed } from "@/components/listings/recently-viewed";
+import { pushRecent } from "@/lib/recently-viewed";
 import { DealBadge } from "@/components/results/deal-badge";
 
 export default function ListingDetail() {
@@ -23,6 +26,7 @@ export default function ListingDetail() {
 
   useEffect(() => {
     if (!id) return;
+    pushRecent(id);
     api.listing(id).then((l) => {
       const li = l as Listing;
       setListing(li);
@@ -106,12 +110,16 @@ export default function ListingDetail() {
         </CardContent>
       </Card>
 
+      <div className="mt-6"><EmiCalculator price={listing.price} /></div>
+
       <Card className="mt-6">
         <CardHeader><CardTitle>Price trend — {listing.locality}</CardTitle></CardHeader>
         <CardContent>
           {trend === null ? <Skeleton className="h-72 w-full" /> : <PriceTrendChart data={trend} />}
         </CardContent>
       </Card>
+
+      <div className="mt-10"><RecentlyViewed excludeId={listing._id} /></div>
     </div>
   );
 }

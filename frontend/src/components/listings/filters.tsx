@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 
 export interface ListingFilters {
   search: string; locality: string; propertyType: string; bhk: string;
+  bath: string; availabilityStatus: string; minSqft: string; maxSqft: string;
   minPrice: string; maxPrice: string; sort: string;
 }
 
@@ -43,6 +44,31 @@ export function Filters({ value, localities, onChange, onReset }: {
           <option value="">Any</option>
           {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} BHK</option>)}
         </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Bathrooms (min)</Label>
+        <Select value={value.bath} onChange={(e) => onChange({ bath: e.target.value })}>
+          <option value="">Any</option>
+          {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}+</option>)}
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Availability</Label>
+        <Select value={value.availabilityStatus} onChange={(e) => onChange({ availabilityStatus: e.target.value })}>
+          <option value="">Any</option>
+          <option value="Ready To Move">Ready To Move</option>
+          <option value="Under Construction">Under Construction</option>
+        </Select>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1.5">
+          <Label>Min sqft</Label>
+          <Input type="number" placeholder="0" value={value.minSqft} onChange={(e) => onChange({ minSqft: e.target.value })} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Max sqft</Label>
+          <Input type="number" placeholder="Any" value={value.maxSqft} onChange={(e) => onChange({ maxSqft: e.target.value })} />
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1.5">

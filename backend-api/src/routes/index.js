@@ -5,6 +5,7 @@ import predictRoutes from "./predict.routes.js";
 import compareRoutes from "./compare.routes.js";
 import savedSearchRoutes from "./savedSearch.routes.js";
 import trendRoutes from "./trends.routes.js";
+import favoriteRoutes from "./favorites.routes.js";
 
 const router = Router();
 router.use("/auth", authRoutes);
@@ -13,4 +14,5 @@ router.use("/predict", predictRoutes);
 router.use("/compare", compareRoutes);
 router.use("/saved-searches", savedSearchRoutes);
 router.use("/trends", trendRoutes);
+router.use("/favorites", favoriteRoutes);
 export default router;

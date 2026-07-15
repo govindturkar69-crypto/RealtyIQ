@@ -4,6 +4,7 @@ import { BedDouble, Bath, Maximize, MapPin } from "lucide-react";
 import type { Listing } from "@/lib/types";
 import { formatINR } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { FavoriteButton } from "./favorite-button";
 
 export function ListingCard({ listing }: { listing: Listing }) {
   return (
@@ -14,6 +15,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
             className="object-cover transition-transform group-hover:scale-105" />
         ) : null}
         <Badge className="absolute left-3 top-3" variant="secondary">{listing.propertyType}</Badge>
+        <FavoriteButton id={listing._id} className="absolute right-3 top-3" />
       </div>
       <div className="space-y-2 p-4">
         <div className="flex items-baseline justify-between">

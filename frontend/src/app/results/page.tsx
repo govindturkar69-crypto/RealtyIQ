@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Download, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { ArrowLeft, Download, Share2, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import type { FeatureImportance, Listing, Paginated, PredictionResult } from "@/lib/types";
 import type { PredictInput } from "@/lib/schemas";
@@ -15,6 +16,7 @@ import { ConfidenceBar } from "@/components/results/confidence-bar";
 import { generateValuationPdf } from "@/lib/pdf";
 import { FeatureImportanceChart } from "@/components/charts/feature-importance-chart";
 import { ListingCard } from "@/components/listings/listing-card";
+import { EmiCalculator } from "@/components/emi-calculator";
 
 interface Stored { input: PredictInput; result: PredictionResult; }
 
@@ -41,9 +43,19 @@ export default function ResultsPage() {
     <div className="mx-auto max-w-4xl px-4 py-12">
       <div className="mb-4 flex items-center justify-between">
         <Link href="/predict"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" /> New estimate</Button></Link>
-        <Button variant="outline" size="sm" onClick={() => generateValuationPdf(input, result)}>
-          <Download className="h-4 w-4" /> Download PDF report
-        </Button>
+        <div className="flex gap-2">
+          {result.predictionId && (
+            <Button variant="outline" size="sm" onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/r/${result.predictionId}`);
+              toast.success("Share link copied");
+            }}>
+              <Share2 className="h-4 w-4" /> Share
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => generateValuationPdf(input, result)}>
+            <Download className="h-4 w-4" /> Download PDF report
+          </Button>
+        </div>
       </div>
 
       <Card className="overflow-hidden">
@@ -79,6 +91,8 @@ export default function ResultsPage() {
             <p className="text-sm text-muted-foreground">Feature importance unavailable.</p>}
         </CardContent>
       </Card>
+
+      <div className="mt-6"><EmiCalculator price={result.predicted_price} /></div>
 
       <div className="mt-6">
         <div className="mb-3 flex items-center justify-between">

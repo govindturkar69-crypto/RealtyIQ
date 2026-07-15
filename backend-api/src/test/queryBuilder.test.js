@@ -39,3 +39,13 @@ test("paginate clamps limit and computes skip", () => {
 test("escapeRegex neutralizes special chars", () => {
   assert.equal(escapeRegex("a.b*c"), "a\\.b\\*c");
 });
+
+test("bath filter uses $gte", () => {
+  const q = buildListingQuery({ bath: "2" });
+  assert.deepEqual(q.bath, { $gte: 2 });
+});
+
+test("availabilityStatus passthrough", () => {
+  const q = buildListingQuery({ availabilityStatus: "Ready To Move" });
+  assert.equal(q.availabilityStatus, "Ready To Move");
+});

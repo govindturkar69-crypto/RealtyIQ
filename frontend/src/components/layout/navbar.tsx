@@ -35,6 +35,9 @@ export function Navbar() {
             </Link>
           ))}
           {user && (
+            <Link href="/favorites" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent">Favorites</Link>
+          )}
+          {user && (
             <Link href="/saved" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent">Saved</Link>
           )}
           {user?.role === "admin" && (

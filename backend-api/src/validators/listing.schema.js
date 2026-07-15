@@ -25,6 +25,8 @@ export const listingQuerySchema = z.object({
   propertyType: z.enum(["Apartment", "Villa", "Plot"]).optional(),
   areaType: z.string().optional(),
   bhk: z.coerce.number().optional(),
+  bath: z.coerce.number().optional(),
+  availabilityStatus: z.enum(["Ready To Move", "Under Construction"]).optional(),
   minPrice: z.coerce.number().optional(),
   maxPrice: z.coerce.number().optional(),
   minSqft: z.coerce.number().optional(),

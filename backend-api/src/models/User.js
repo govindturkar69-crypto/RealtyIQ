@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     refreshTokens: { type: [String], default: [], select: false },
+    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Listing" }],
   },
   { timestamps: true }
 );

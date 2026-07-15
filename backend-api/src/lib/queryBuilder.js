@@ -5,6 +5,8 @@ export function buildListingQuery(q = {}) {
   if (q.propertyType) filter.propertyType = q.propertyType;
   if (q.areaType) filter.areaType = q.areaType;
   if (q.bhk !== undefined) filter.bhk = Number(q.bhk);
+  if (q.bath !== undefined) filter.bath = { $gte: Number(q.bath) };
+  if (q.availabilityStatus) filter.availabilityStatus = q.availabilityStatus;
   const price = {};
   if (q.minPrice !== undefined) price.$gte = Number(q.minPrice);
   if (q.maxPrice !== undefined) price.$lte = Number(q.maxPrice);
