@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports: ["27017:27017"]
+    volumes: ["mongo_data:/data/db"]
+
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile.txt
+    environment:
+      - PORT=8001
+      - DATASET=bengaluru
+    ports: ["8001:8001"]
+
+  backend-api:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile.txt
+    depends_on: [mongo, ml-service]
+    environment:
+      - PORT=8000
+      - MONGODB_URI=mongodb://mongo:27017/realtyiq
+      - ML_SERVICE_URL=http://ml-service:8001
+      - JWT_ACCESS_SECRET=change_me_access
+      - JWT_REFRESH_SECRET=change_me_refresh
+      - CORS_ORIGIN=http://localhost:3000
+    ports: ["8000:8000"]
+
+volumes:
+  mongo_data:

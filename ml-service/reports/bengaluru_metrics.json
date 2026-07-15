@@ -1,0 +1,76 @@
+{
+  "dataset": "bengaluru",
+  "n_train": 8215,
+  "n_test": 2054,
+  "n_encoded_features": 236,
+  "target_mean": 9026298.130295062,
+  "metrics": {
+    "HistGBT(numpy)": {
+      "r2": 0.739206303299786,
+      "mae": 2070249.0750077006,
+      "rmse": 3838734.1001806813,
+      "mape": 21.719312104631786,
+      "cv_r2_mean": 0.6571881267814735,
+      "cv_r2_std": 0.06687683684386922
+    },
+    "LinearBaseline": {
+      "r2": 0.6665431798441795,
+      "mae": 2076753.4989492816,
+      "rmse": 4340695.165179021,
+      "mape": 21.934885580213574
+    }
+  },
+  "sigma_log": 0.2806656613117152,
+  "feature_importance": {
+    "total_sqft": 0.59747065036603,
+    "sqft_per_bhk": 0.09290424078271131,
+    "bath": 0.04209818925338882,
+    "bhk": 0.03194565916803416,
+    "location": 0.020732247177462026,
+    "area_type": 0.02014040634448233,
+    "balcony": 0.005706620577837107,
+    "availability_status": 0.005686479743394424,
+    "bath_per_bhk": -0.0005213258975600432
+  },
+  "sample_predictions": [
+    {
+      "location": "Whitefield",
+      "area_type": "Super built-up Area",
+      "availability_status": "Ready To Move",
+      "total_sqft": 1200,
+      "bhk": 2,
+      "bath": 2,
+      "balcony": 1,
+      "predicted_price": 5820000,
+      "confidence_low": 3358000,
+      "confidence_high": 10089000,
+      "price_per_sqft": 4850
+    },
+    {
+      "location": "Electronic City",
+      "area_type": "Super built-up Area",
+      "availability_status": "Ready To Move",
+      "total_sqft": 1000,
+      "bhk": 2,
+      "bath": 2,
+      "balcony": 1,
+      "predicted_price": 4363000,
+      "confidence_low": 2517000,
+      "confidence_high": 7563000,
+      "price_per_sqft": 4363
+    },
+    {
+      "location": "Indira Nagar",
+      "area_type": "Built-up Area",
+      "availability_status": "Ready To Move",
+      "total_sqft": 1800,
+      "bhk": 3,
+      "bath": 3,
+      "balcony": 2,
+      "predicted_price": 11041000,
+      "confidence_low": 6369000,
+      "confidence_high": 19138000,
+      "price_per_sqft": 6133
+    }
+  ]
+}

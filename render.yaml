@@ -1,0 +1,39 @@
+# Render blueprint — deploys the ML service and the Express API.
+# Database is MongoDB Atlas (set MONGODB_URI manually). Frontend goes to Vercel.
+services:
+  - type: web
+    name: realtyiq-ml
+    runtime: docker
+    dockerfilePath: ./ml-service/Dockerfile.txt
+    dockerContext: ./ml-service
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATASET
+        value: bengaluru
+
+  - type: web
+    name: realtyiq-api
+    runtime: node
+    rootDir: backend-api
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: ML_SERVICE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 7d

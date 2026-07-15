@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+**/.venv/
+
+# builds
+.next/
+**/.next/
+out/
+dist/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.local
+
+# ml artifacts (retrained on deploy)
+ml-service/models/*.joblib
+
+# misc
+*.tsbuildinfo
+.DS_Store
+npm-debug.log*
