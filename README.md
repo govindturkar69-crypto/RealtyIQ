@@ -78,6 +78,9 @@ breakdown of **what drove the price** — no black box, no fake numbers.
 - 🔔 **Saved searches** + in-app new-match alerts
 - 📄 **PDF valuation report** export (jsPDF)
 - 🛠️ **Admin dashboard** (stats + listing management)
+- 💰 **EMI / loan calculator** (sliders + breakdown chart)
+- ❤️ **Favorites / wishlist** + shareable valuation links
+- 🕐 **Recently viewed** + advanced filters (bath, area, availability)
 
 </td>
 </tr>
