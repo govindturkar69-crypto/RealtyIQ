@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Brain, LineChart, MapPin, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Hero3D } from "@/components/three/hero-3d";
 
 const steps = [
   { icon: MapPin, title: "Enter property details", desc: "Locality, size, BHK, bathrooms and availability — a guided multi-step form." },
@@ -35,6 +36,7 @@ export default function Home() {
             <Link href="/predict"><Button size="lg">Estimate a price <ArrowRight className="h-4 w-4" /></Button></Link>
             <Link href="/listings"><Button size="lg" variant="outline">Browse listings</Button></Link>
           </div>
+          <Hero3D />
         </div>
       </section>
 

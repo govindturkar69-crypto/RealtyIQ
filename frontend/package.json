@@ -25,7 +25,10 @@
     "leaflet": "^1.9.4",
     "react-leaflet": "^4.2.1",
     "jspdf": "^2.5.1",
-    "leaflet.heat": "^0.2.0"
+    "leaflet.heat": "^0.2.0",
+    "three": "^0.169.0",
+    "@react-three/fiber": "^8.17.10",
+    "@react-three/drei": "^9.114.0"
   },
   "devDependencies": {
     "typescript": "^5.5.3",
@@ -37,6 +40,7 @@
     "autoprefixer": "^10.4.19",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
-    "@types/leaflet": "^1.9.12"
+    "@types/leaflet": "^1.9.12",
+    "@types/three": "^0.169.0"
   }
 }
