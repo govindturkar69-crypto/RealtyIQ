@@ -1,5 +1,6 @@
 "use client";
 import { Heart } from "lucide-react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -24,9 +25,12 @@ export function FavoriteButton({ id, className }: { id: string; className?: stri
   }
 
   return (
-    <button type="button" onClick={onClick} aria-label="Save to favorites"
+    <motion.button type="button" onClick={onClick} aria-label="Save to favorites" whileTap={{ scale: 0.75 }}
       className={cn("rounded-full bg-background/80 p-2 backdrop-blur transition hover:bg-background", className)}>
-      <Heart className={cn("h-4 w-4", active ? "fill-red-500 text-red-500" : "text-foreground")} />
-    </button>
+      <motion.span key={String(active)} initial={{ scale: 0.6 }} animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 500, damping: 14 }} className="block">
+        <Heart className={cn("h-4 w-4", active ? "fill-red-500 text-red-500" : "text-foreground")} />
+      </motion.span>
+    </motion.button>
   );
 }

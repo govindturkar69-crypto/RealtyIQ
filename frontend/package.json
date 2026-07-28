@@ -28,7 +28,8 @@
     "leaflet.heat": "^0.2.0",
     "three": "^0.169.0",
     "@react-three/fiber": "^8.17.10",
-    "@react-three/drei": "^9.114.0"
+    "@react-three/drei": "^9.114.0",
+    "framer-motion": "^11.3.8"
   },
   "devDependencies": {
     "typescript": "^5.5.3",

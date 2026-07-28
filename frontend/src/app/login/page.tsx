@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
-import { AuthCard } from "@/components/auth/auth-card";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +28,7 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthCard title="Log in" description="Access your predictions and saved searches"
+    <AuthShell title="Log in" description="Access your predictions and saved searches"
       footer={<>Don&apos;t have an account? <Link href="/signup" className="text-primary hover:underline">Sign up</Link></>}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
@@ -51,6 +51,6 @@ export default function LoginPage() {
           {loading && <Loader2 className="h-4 w-4 animate-spin" />} Log in
         </Button>
       </form>
-    </AuthCard>
+    </AuthShell>
   );
 }

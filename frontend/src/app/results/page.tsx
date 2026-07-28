@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfidenceBar } from "@/components/results/confidence-bar";
 import { generateValuationPdf } from "@/lib/pdf";
 import { FeatureImportanceChart } from "@/components/charts/feature-importance-chart";
+import { Result3D } from "@/components/three/result-3d";
 import { ListingCard } from "@/components/listings/listing-card";
 import { EmiCalculator } from "@/components/emi-calculator";
 
@@ -60,6 +61,7 @@ export default function ResultsPage() {
 
       <Card className="overflow-hidden">
         <div className="bg-primary/5 p-8 text-center">
+          <Result3D />
           <div className="mb-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
             <Sparkles className="h-4 w-4 text-primary" /> Estimated value · {result.model_name}
           </div>

@@ -50,3 +50,10 @@
 * { border-color: hsl(var(--border)); }
 body { background: hsl(var(--background)); color: hsl(var(--foreground)); }
 .hero-gradient { background-image: radial-gradient(60% 60% at 50% 0%, hsl(var(--primary) / 0.15), transparent); }
+
+.aurora { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+.aurora::before, .aurora::after { content: ""; position: absolute; border-radius: 9999px; filter: blur(80px); opacity: 0.45; }
+.aurora::before { width: 520px; height: 520px; background: hsl(var(--primary) / 0.5); top: -180px; left: 8%; animation: aurora1 16s ease-in-out infinite; }
+.aurora::after { width: 440px; height: 440px; background: #8b5cf6; top: -120px; right: 8%; animation: aurora2 20s ease-in-out infinite; }
+@keyframes aurora1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(40px,30px) scale(1.1); } }
+@keyframes aurora2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-40px,20px) scale(1.05); } }

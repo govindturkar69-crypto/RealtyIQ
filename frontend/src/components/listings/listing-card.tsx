@@ -8,7 +8,7 @@ import { FavoriteButton } from "./favorite-button";
 
 export function ListingCard({ listing }: { listing: Listing }) {
   return (
-    <Link href={`/listings/${listing._id}`} className="group block overflow-hidden rounded-lg border bg-card transition-shadow hover:shadow-md">
+    <Link href={`/listings/${listing._id}`} className="group block overflow-hidden rounded-lg border bg-card transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
       <div className="relative h-44 w-full overflow-hidden bg-muted">
         {listing.images?.[0] ? (
           <Image src={listing.images[0]} alt={listing.title} fill sizes="(max-width:768px) 100vw, 33vw"
