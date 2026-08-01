@@ -59,9 +59,8 @@ async function run() {
   await admin.setPassword("Admin@12345");
   const demo = new User({ name: "Demo User", email: "demo@realtyiq.dev", role: "user" });
   await demo.setPassword("Demo@12345");
-  await User.insertMany([admin, demo].map((u) => u), { rawResult: false }).catch(async () => {
-    await admin.save(); await demo.save();
-  });
+  await admin.save();
+  await demo.save();
 
   const docs = sample.map((r, i) => {
     const price = Math.round(Number(r.price));

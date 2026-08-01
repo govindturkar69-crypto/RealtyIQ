@@ -103,6 +103,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", default=os.getenv("DATASET", "bengaluru"),
                     choices=["bengaluru", "synthetic"])
+    ap.add_argument("--fast", action="store_true",
+                    default=os.getenv("FAST_TRAIN") == "1",
+                    help="Low-memory single-model training (for constrained deploys)")
     args = ap.parse_args()
     os.environ["DATASET"] = args.dataset
 
@@ -119,18 +122,34 @@ def main():
                                           random_state=C.RANDOM_STATE)
 
     leaderboard, fitted = {}, {}
-    for name, (est, grid) in candidate_models(C).items():
-        search = GridSearchCV(make_pipeline(F, est), grid, scoring="r2",
-                              cv=C.CV_FOLDS, n_jobs=-1)
-        search.fit(Xtr, ytr)
-        preds = search.predict(Xte)
-        leaderboard[name] = {"cv_r2": float(search.best_score_),
-                             "best_params": {k.split("__")[-1]: v
-                                             for k, v in search.best_params_.items()},
-                             "test": evaluate(yte.to_numpy(), preds)}
-        fitted[name] = search.best_estimator_
-        print(f"{name}: CV R2={search.best_score_:.4f}  "
-              f"Test R2={leaderboard[name]['test']['r2']:.4f}")
+    if args.fast:
+        from sklearn.ensemble import GradientBoostingRegressor
+        from sklearn.model_selection import cross_val_score
+        est = GradientBoostingRegressor(n_estimators=400, max_depth=3,
+                                        learning_rate=0.05, random_state=C.RANDOM_STATE)
+        pipe = make_pipeline(F, est)
+        cv = cross_val_score(pipe, Xtr, ytr, scoring="r2", cv=3, n_jobs=1)
+        pipe.fit(Xtr, ytr)
+        preds = pipe.predict(Xte)
+        leaderboard["GradientBoosting"] = {"cv_r2": float(cv.mean()),
+                                           "best_params": {"mode": "fast"},
+                                           "test": evaluate(yte.to_numpy(), preds)}
+        fitted["GradientBoosting"] = pipe
+        print(f"GradientBoosting (fast): CV R2={cv.mean():.4f}  "
+              f"Test R2={leaderboard['GradientBoosting']['test']['r2']:.4f}")
+    else:
+        for name, (est, grid) in candidate_models(C).items():
+            search = GridSearchCV(make_pipeline(F, est), grid, scoring="r2",
+                                  cv=C.CV_FOLDS, n_jobs=-1)
+            search.fit(Xtr, ytr)
+            preds = search.predict(Xte)
+            leaderboard[name] = {"cv_r2": float(search.best_score_),
+                                 "best_params": {k.split("__")[-1]: v
+                                                 for k, v in search.best_params_.items()},
+                                 "test": evaluate(yte.to_numpy(), preds)}
+            fitted[name] = search.best_estimator_
+            print(f"{name}: CV R2={search.best_score_:.4f}  "
+                  f"Test R2={leaderboard[name]['test']['r2']:.4f}")
 
     best_name = max(leaderboard, key=lambda n: leaderboard[n]["cv_r2"])
     best = fitted[best_name]

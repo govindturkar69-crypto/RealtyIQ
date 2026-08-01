@@ -3,6 +3,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-RUN python src/train.py --dataset bengaluru
+RUN python src/train.py --dataset bengaluru --fast
 EXPOSE 8001
 CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8001} --app-dir app"]
