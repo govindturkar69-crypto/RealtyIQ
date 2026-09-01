@@ -49,7 +49,7 @@ export function Navbar() {
           {user ? (
             <>
               <Link href="/dashboard"><Button variant="ghost" size="sm">{user.name.split(" ")[0]}</Button></Link>
-              <Button variant="outline" size="sm" onClick={() => { logout(); router.push("/"); }}>
+              <Button variant="outline" size="sm" onClick={async () => { await logout(); router.push("/"); }}>
                 <LogOut className="h-4 w-4" /> Logout
               </Button>
             </>

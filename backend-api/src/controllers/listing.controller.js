@@ -30,7 +30,11 @@ export const createListing = asyncHandler(async (req, res) => {
 
 export const updateListing = asyncHandler(async (req, res) => {
   const patch = { ...req.body };
-  if (patch.price && patch.totalSqft) patch.pricePerSqft = Math.round(patch.price / patch.totalSqft);
+  if (patch.price || patch.totalSqft) {
+    const current = await Listing.findById(req.params.id).select("price totalSqft").lean();
+    if (!current) throw ApiError.notFound("Listing not found");
+    patch.pricePerSqft = Math.round((patch.price ?? current.price) / (patch.totalSqft ?? current.totalSqft));
+  }
   const listing = await Listing.findByIdAndUpdate(req.params.id, patch, { new: true, runValidators: true });
   if (!listing) throw ApiError.notFound("Listing not found");
   res.json(listing);

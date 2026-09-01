@@ -2,6 +2,7 @@ import { Prediction } from "../models/Prediction.js";
 import { mlService } from "../services/ml.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
+import { Listing } from "../models/Listing.js";
 
 export const predict = asyncHandler(async (req, res) => {
   const result = await mlService.predict(req.body);
@@ -24,7 +25,16 @@ export const featureImportance = asyncHandler(async (req, res) => {
 });
 
 export const options = asyncHandler(async (req, res) => {
-  res.json(await mlService.localities());
+  try {
+    res.json(await mlService.localities());
+  } catch {
+    const location = (await Listing.distinct("locality")).sort();
+    res.json({ categorical: {
+      location,
+      area_type: ["Built-up Area", "Carpet Area", "Plot Area", "Super built-up Area"],
+      availability_status: ["Ready To Move", "Under Construction"],
+    } });
+  }
 });
 
 export const history = asyncHandler(async (req, res) => {

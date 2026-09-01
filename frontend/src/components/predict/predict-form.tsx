@@ -26,6 +26,7 @@ export function PredictForm() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [enums, setEnums] = useState<LocalityEnums | null>(null);
+  const [optionsError, setOptionsError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<PredictInput>({
@@ -38,15 +39,25 @@ export function PredictForm() {
   });
   const { register, handleSubmit, trigger, getValues, watch, formState: { errors } } = form;
 
-  useEffect(() => {
+  function loadOptions() {
+    setEnums(null);
+    setOptionsError(false);
     api.localities()
       .then((e) => {
         const en = e as LocalityEnums;
+        if (!en.categorical?.location?.length) throw new Error("No localities available");
         setEnums(en);
         const locs = en.categorical?.location;
         if (locs?.length) form.setValue("location", locs.includes("Whitefield") ? "Whitefield" : locs[0]);
       })
-      .catch(() => toast.error("Could not load locality options. Is the API running?"));
+      .catch(() => {
+        setOptionsError(true);
+        toast.error("Could not load locality options");
+      });
+  }
+
+  useEffect(() => {
+    loadOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -93,10 +104,12 @@ export function PredictForm() {
           {step === 0 && (
             <>
               <Field label="Locality" error={errors.location?.message}>
-                <Select {...register("location")}>
-                  {locations.length === 0 && <option value="">Loading…</option>}
+                <Select {...register("location")} disabled={!enums || optionsError}>
+                  {!enums && !optionsError && <option value="">Loading…</option>}
+                  {optionsError && <option value="">Localities unavailable</option>}
                   {locations.map((l) => <option key={l} value={l}>{l}</option>)}
                 </Select>
+                {optionsError && <Button type="button" variant="outline" size="sm" onClick={loadOptions}>Retry</Button>}
               </Field>
               <Field label="Area type" error={errors.area_type?.message}>
                 <Select {...register("area_type")}>

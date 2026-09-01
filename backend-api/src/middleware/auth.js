@@ -1,12 +1,16 @@
 import { verifyAccessToken } from "../utils/jwt.js";
 import { ApiError } from "../utils/ApiError.js";
+import { User } from "../models/User.js";
 
-export function authenticate(req, res, next) {
+export async function authenticate(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
   if (!token) return next(ApiError.unauthorized("Missing bearer token"));
   try {
     req.user = verifyAccessToken(token);
+    if (!(await User.exists({ _id: req.user.sub, isActive: { $ne: false } }))) {
+      throw ApiError.forbidden("Account disabled or unavailable");
+    }
     next();
   } catch (e) {
     next(e);

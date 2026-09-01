@@ -1,4 +1,4 @@
-export interface User { _id: string; name: string; email: string; role: "user" | "admin"; }
+export interface User { _id: string; name: string; email: string; role: "user" | "admin"; isActive: boolean; createdAt?: string; }
 
 export interface AuthResponse { user: User; accessToken: string; refreshToken: string; }
 

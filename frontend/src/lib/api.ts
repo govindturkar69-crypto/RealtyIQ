@@ -51,7 +51,13 @@ export const api = {
   login: (b: { email: string; password: string }) =>
     apiFetch<AuthResponse>("/api/auth/login", { method: "POST", body: JSON.stringify(b) }),
   me: () => apiFetch<{ user: AuthResponse["user"] }>("/api/auth/me"),
+  updateProfile: (name: string) => apiFetch<{ user: AuthResponse["user"] }>("/api/auth/me", { method: "PATCH", body: JSON.stringify({ name }) }),
+  changePassword: (currentPassword: string, newPassword: string) => apiFetch("/api/auth/password", { method: "PATCH", body: JSON.stringify({ currentPassword, newPassword }) }),
+  logout: () => apiFetch("/api/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) }),
   deleteAccount: () => apiFetch("/api/auth/me", { method: "DELETE" }),
+  users: () => apiFetch("/api/auth/admin/users"),
+  manageUser: (id: string, patch: { role?: "user" | "admin"; isActive?: boolean }) =>
+    apiFetch(`/api/auth/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   predict: (b: Record<string, unknown>) => apiFetch("/api/predict", { method: "POST", body: JSON.stringify(b) }),
   featureImportance: () => apiFetch("/api/predict/feature-importance?top=10"),
   history: () => apiFetch("/api/predict/history"),

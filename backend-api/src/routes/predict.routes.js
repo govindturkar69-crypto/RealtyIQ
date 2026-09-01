@@ -8,6 +8,6 @@ const router = Router();
 router.post("/", optionalAuth, validate(predictSchema), predict);
 router.get("/feature-importance", featureImportance);
 router.get("/options", options);
-router.get("/:id", getPredictionById);
 router.get("/history", authenticate, history);
+router.get("/:id", getPredictionById);
 export default router;

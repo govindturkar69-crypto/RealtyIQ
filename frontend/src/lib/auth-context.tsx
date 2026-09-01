@@ -8,7 +8,8 @@ interface AuthCtx {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  updateUser: (user: User) => void;
 }
 
 const Ctx = createContext<AuthCtx | undefined>(undefined);
@@ -33,9 +34,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTokens(r.accessToken, r.refreshToken);
     setUser(r.user);
   }
-  function logout() { setTokens(null, null); setUser(null); }
+  async function logout() {
+    try { await api.logout(); } catch { /* local logout must still succeed */ }
+    setTokens(null, null);
+    setUser(null);
+  }
 
-  return <Ctx.Provider value={{ user, loading, login, signup, logout }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ user, loading, login, signup, logout, updateUser: setUser }}>{children}</Ctx.Provider>;
 }
 
 export function useAuth() {

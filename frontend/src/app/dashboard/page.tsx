@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,8 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface HistoryItem {
   _id: string; locality: string; predictedPrice: number; confidenceLow: number;
@@ -17,8 +19,30 @@ interface HistoryItem {
 }
 
 function DashboardInner() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const router = useRouter();
+  const [name, setName] = useState(user?.name ?? "");
+  const [passwords, setPasswords] = useState({ current: "", next: "" });
+
+  async function saveProfile(e: FormEvent) {
+    e.preventDefault();
+    try {
+      const { user: updated } = await api.updateProfile(name.trim());
+      updateUser(updated);
+      toast.success("Profile updated");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Profile update failed"); }
+  }
+
+  async function changePassword(e: FormEvent) {
+    e.preventDefault();
+    try {
+      await api.changePassword(passwords.current, passwords.next);
+      setPasswords({ current: "", next: "" });
+      toast.success("Password changed. Please log in again.");
+      await logout();
+      router.push("/login");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Password change failed"); }
+  }
 
   async function deleteAccount() {
     if (!confirm("Permanently delete your account and all your data? This cannot be undone.")) return;
@@ -74,7 +98,30 @@ function DashboardInner() {
         </CardContent></Card>
       )}
 
-      <Card className="mt-8 border-destructive/40">
+      <div className="mt-8 grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>Profile</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={saveProfile} className="space-y-4">
+              <div className="space-y-1.5"><Label>Name</Label><Input value={name} minLength={2} maxLength={80} onChange={(e) => setName(e.target.value)} required /></div>
+              <div className="space-y-1.5"><Label>Email</Label><Input value={user?.email ?? ""} disabled /></div>
+              <Button type="submit">Save profile</Button>
+            </form>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Change password</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={changePassword} className="space-y-4">
+              <div className="space-y-1.5"><Label>Current password</Label><Input type="password" value={passwords.current} onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))} required /></div>
+              <div className="space-y-1.5"><Label>New password</Label><Input type="password" minLength={8} value={passwords.next} onChange={(e) => setPasswords((p) => ({ ...p, next: e.target.value }))} required /></div>
+              <Button type="submit">Change password</Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="mt-6 border-destructive/40">
         <CardHeader><CardTitle className="text-destructive">Danger zone</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">Permanently delete your account and all associated data (predictions, saved searches).</p>
