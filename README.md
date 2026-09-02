@@ -65,6 +65,7 @@ breakdown of **what drove the price** — no black box, no fake numbers.
 - 🔎 **Listings browse** — filter, sort, paginate
 - 🏢 **Property detail** with locality price trend
 - 🔐 **JWT auth** (access + refresh, protected routes)
+- 👤 **Customer panel** — history, profile/password, inquiries, favorites, saved searches and alerts
 - 🌓 **Dark mode**, skeleton loaders, toasts
 
 </td>
@@ -77,7 +78,7 @@ breakdown of **what drove the price** — no black box, no fake numbers.
 - 💡 **"Is this a good deal?"** under/over/fair indicator
 - 🔔 **Saved searches** + in-app new-match alerts
 - 📄 **PDF valuation report** export (jsPDF)
-- 🛠️ **Admin dashboard** (stats + listing management)
+- 🛠️ **Admin panel** — stats/ML health, listing CRUD + CSV import, user roles/status, inquiry workflow
 - 💰 **EMI / loan calculator** (sliders + breakdown chart)
 - ❤️ **Favorites / wishlist** + shareable valuation links
 - 🕐 **Recently viewed** + advanced filters (bath, area, availability)
@@ -100,8 +101,9 @@ breakdown of **what drove the price** — no black box, no fake numbers.
                                                │
                                      ┌─────────▼─────────┐
                                      │  MongoDB Atlas    │
-                                     │  users · listings │
-                                     │  predictions      │
+                                     │ users · listings  │
+                                     │ predictions       │
+                                     │ searches/inquiries│
                                      └───────────────────┘
 ```
 
@@ -113,13 +115,11 @@ Full pipeline on the **Kaggle Bengaluru House Price** dataset (13,320 → 10,269
 parse messy `total_sqft` (ranges + unit conversions), extract BHK, group 1,305 → 224 localities, per-locality
 outlier removal, engineered `sqft_per_bhk` / `bath_per_bhk`, log-target modelling.
 
-Three models trained and compared with **5-fold GridSearchCV**; best selected by CV R²:
-
-| Model | CV R² | Test R² |
-|-------|:-----:|:-------:|
-| Random Forest | 0.749 | 0.775 |
-| **Gradient Boosting** ✅ | **0.782** | **0.804** |
-| XGBoost | 0.775 | 0.815 |
+The training pipeline compares Random Forest, Gradient Boosting, and XGBoost with 5-fold
+GridSearchCV and persists the selected model. The checked-in, reproducible sandbox evidence is
+explicitly labelled `HistGBT(numpy-sandbox-reference)` and reports **test R² 0.739**, MAE ₹20.7L,
+RMSE ₹38.4L, and 3-fold CV R² 0.657 ± 0.067. A real `src/train.py` or Docker build overwrites the
+runtime metadata with the selected sklearn/XGBoost model, so inspect `/model-info` for deployed metrics.
 
 Each prediction returns a **95% confidence interval** derived from log-residual σ, plus feature importances.
 
@@ -144,7 +144,7 @@ RealtyIQ/
 ├── frontend/        # Next.js 14 app (pages, components, lib)
 ├── backend-api/     # Express API (auth, listings, predict, compare, trends, saved-searches)
 ├── ml-service/      # FastAPI + training pipeline + dataset
-├── docs/            # Phase notes (1–5)
+├── docs/            # Canonical product/engineering docs + historical phase notes
 ├── render.yaml      # Render blueprint (ML + API)
 ├── docker-compose.yml
 ├── DEPLOYMENT.md    # step-by-step deploy guide
@@ -170,6 +170,10 @@ cd frontend && npm install && npm run dev   # http://localhost:3000
 ```
 
 Full instructions in **[TESTING.md](TESTING.md)** · deploy guide in **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+
+Canonical documentation: **[PRD](docs/PRD.md)** · **[TRD](docs/TRD.md)** ·
+**[Architecture](docs/ARCHITECTURE.md)** · **[Database](docs/DATABASE.md)** ·
+**[API](docs/API.md)** · **[UI/UX](docs/UI-UX.md)** · **[Testing](docs/TESTING.md)**.
 
 ---
 
