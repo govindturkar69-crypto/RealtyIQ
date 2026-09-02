@@ -119,6 +119,6 @@ Current limitations: browser tokens live in `localStorage` (XSS exposure), no CS
 - No CI workflow pins and runs the verification matrix.
 - No Express OpenAPI schema or generated client prevents contract drift.
 - No telemetry, tracing backend, audit events, alerting, backup test, or capacity target is defined.
-- Agent/broker authorization semantics are not differentiated.
+- Agent and broker values remain assignable but currently have no protected panel; define their permissions before enabling either role.
 - Checked-in ML metadata is explicitly a numpy sandbox reference; README model tables describe another training result. A reproducible authoritative model artifact/evaluation run must be selected.
 - `ALLOWED_ORIGINS=*` is the ML default, although the ML service is normally private behind Express.

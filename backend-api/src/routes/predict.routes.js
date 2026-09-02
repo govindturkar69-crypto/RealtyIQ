@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validate } from "../middleware/validate.js";
-import { authenticate, optionalAuth } from "../middleware/auth.js";
+import { authenticate, optionalAuth, requireRole } from "../middleware/auth.js";
 import { predictSchema } from "../validators/predict.schema.js";
 import { predict, featureImportance, history, options, getPredictionById } from "../controllers/predict.controller.js";
 
@@ -8,6 +8,6 @@ const router = Router();
 router.post("/", optionalAuth, validate(predictSchema), predict);
 router.get("/feature-importance", featureImportance);
 router.get("/options", options);
-router.get("/history", authenticate, history);
+router.get("/history", authenticate, requireRole("user", "admin"), history);
 router.get("/:id", getPredictionById);
 export default router;

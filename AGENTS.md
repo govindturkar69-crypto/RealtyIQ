@@ -20,6 +20,7 @@ Read the relevant canonical document before changing behavior: [PRD](docs/PRD.md
 - Validate every external input with the existing Zod/Pydantic patterns.
 - Never commit `.env` files, credentials, generated build output, `node_modules`, virtual environments, or newly trained binary model artifacts unless explicitly intended.
 - Do not silently change model metrics, confidence semantics, role permissions, seed credentials, or saved-search alert semantics; these are user-visible contracts.
+- Protected user-panel features are available only to `user` and `admin`; admins inherit all user capabilities. `agent` and `broker` currently have no protected panel.
 - Treat `ml-service/models/metadata.json` and `ml-service/reports/bengaluru_metrics.json` as checked-in evidence. They currently describe the numpy sandbox reference, while a real training run overwrites metadata with the selected sklearn/XGBoost model.
 
 ## Local commands

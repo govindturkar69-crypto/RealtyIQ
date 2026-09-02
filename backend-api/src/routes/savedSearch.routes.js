@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { validate } from "../middleware/validate.js";
-import { authenticate } from "../middleware/auth.js";
+import { authenticate, requireRole } from "../middleware/auth.js";
 import { savedSearchSchema } from "../validators/savedSearch.schema.js";
 import { listSaved, createSaved, deleteSaved, markNotified } from "../controllers/savedSearch.controller.js";
 
 const router = Router();
-router.use(authenticate);
+router.use(authenticate, requireRole("user", "admin"));
 router.get("/", listSaved);
 router.post("/", validate(savedSearchSchema), createSaved);
 router.delete("/:id", deleteSaved);

@@ -133,5 +133,5 @@ function DashboardInner() {
 }
 
 export default function DashboardPage() {
-  return <ProtectedRoute excludeRole="admin"><DashboardInner /></ProtectedRoute>;
+  return <ProtectedRoute><DashboardInner /></ProtectedRoute>;
 }

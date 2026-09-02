@@ -22,7 +22,7 @@ export default function LoginPage() {
 
   async function onSubmit(v: LoginInput) {
     setLoading(true);
-    try { const user = await login(v.email, v.password); toast.success("Welcome back"); router.push(user.role === "admin" ? "/admin" : "/dashboard"); }
+    try { const user = await login(v.email, v.password); toast.success("Welcome back"); router.push(user.role === "admin" ? "/admin" : user.role === "user" ? "/dashboard" : "/"); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Login failed"); }
     finally { setLoading(false); }
   }

@@ -102,7 +102,7 @@ Test with `user`, `agent`, `broker`, and `admin` accounts:
 - A stale access-token role is superseded by the database role.
 - Disabled account access is denied.
 - Last active admin cannot be demoted, disabled, or deleted.
-- Agent and broker behavior currently matches user behavior; record any new divergence as a contract change.
+- Agent and broker accounts can authenticate but must be denied protected user/admin panel APIs until dedicated permissions are defined.
 
 ### Listings and CSV
 

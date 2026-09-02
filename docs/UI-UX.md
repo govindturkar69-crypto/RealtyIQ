@@ -4,8 +4,8 @@
 
 RealtyIQ uses one public product shell with role-aware navigation and two connected authenticated workspaces:
 
-- **Customer workspace:** task-oriented discovery, valuation, saving, and communication for `user`, `agent`, and `broker`.
-- **Admin workspace:** dense operational controls for the `admin` role.
+- **User workspace:** task-oriented discovery, valuation, saving, and communication for `user`.
+- **Admin workspace:** every user capability plus dense operational controls for `admin`.
 
 Both use the same theme tokens, navbar, footer, API, and underlying records. They differ in information density, navigation, permissions, and primary calls to action.
 
@@ -37,19 +37,19 @@ Prediction history, favorites, saving, and inquiries require authentication even
 | `/saved` | Saved filters, current/new matches, acknowledge/delete |
 | `/notifications` | Saved-search deltas and inquiry statuses |
 
-Admins are excluded from `/dashboard`; agents and brokers currently receive exactly the customer experience.
+Users and admins may access these routes. Agent and broker accounts have no assigned protected panel.
 
 ### Admin route
 
-`/admin` contains overview metrics, ML status, listing create/edit/delete/import, user roles/status, and inquiry workflow. It is visually related to the public site but operationally separate. Admin navigation links to Admin panel, Properties, Analytics, and Market map; it omits customer favorites/saved/alerts.
+`/admin` contains overview metrics, ML status, listing create/edit/delete/import, user roles/status, and inquiry workflow. Admin navigation also exposes the complete user feature set, including dashboard, prediction, listings, trends, map, comparison, favorites, saved searches, and alerts.
 
 ## 3. Navigation behavior
 
 - Sticky desktop navbar with RealtyIQ home link, active-route treatment, theme toggle, and auth actions.
 - Visitor links: Predict, Listings, Trends, Map, Compare plus Login/Sign up.
 - Signed-in customer adds Favorites, Saved, Alerts, and first-name dashboard link.
-- Admin receives the admin link set and an Admin identity button.
-- Customer alert badge polls saved searches every 60 seconds and reloads on route changes.
+- Admin receives the admin link plus every user link and an Admin identity button.
+- User/admin alert badges poll saved searches every 60 seconds and reload on route changes.
 
 Current limitation: primary navigation is hidden below the `md` breakpoint without an implemented mobile menu, leaving only brand/theme/auth actions. This is a material responsive UX gap.
 

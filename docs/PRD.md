@@ -4,8 +4,8 @@
 
 RealtyIQ is a Bengaluru-focused real-estate decision-support application. It combines property listings with machine-learning price estimates, confidence ranges, market trends, comparisons, maps, saved activity, and inquiry workflows. The product deliberately exposes two related experiences over the same data:
 
-- **Customer panel** for registered `user`, `agent`, and `broker` roles: discover, value, compare, save, and inquire.
-- **Admin panel** for `admin`: operate listings and accounts, process inquiries, and observe platform/model health.
+- **User panel** for registered `user` accounts: discover, value, compare, save, and inquire.
+- **Admin panel** for `admin`: every user-panel capability plus listing/account operations, inquiry processing, analytics, and model health.
 
 The system is informational. Model estimates, deal labels, EMI outputs, and ROI scenarios are not financial advice.
 
@@ -35,9 +35,9 @@ Revenue, subscriptions, conversion funnels, notification delivery, and recommend
 | Persona | Role value | Primary experience | Effective permissions |
 |---|---|---|---|
 | Customer | `user` | Customer panel | All public discovery plus history, favorites, saved searches, alerts, profile, and inquiries |
-| Agent | `agent` | Customer panel | Currently identical to `user`; no agent-only listing workflow exists |
-| Broker | `broker` | Customer panel | Currently identical to `user`; no broker-only workflow exists |
-| Administrator | `admin` | Admin panel | Listing CRUD/import, user role/status management, inquiry status management, admin analytics and ML status |
+| Agent | `agent` | No panel assigned | Can authenticate but cannot use protected user/admin panel APIs |
+| Broker | `broker` | No panel assigned | Can authenticate but cannot use protected user/admin panel APIs |
+| Administrator | `admin` | Admin + user panels | Every user feature plus listing CRUD/import, user role/status management, inquiry status management, admin analytics and ML status |
 | Visitor | none | Public site | Landing, listings, details, prediction submission, trends, map, comparison, public shared result |
 
 Public prediction submission is intentional. If a valid access token is present, the prediction is associated with the account; otherwise it is stored anonymously.
@@ -65,6 +65,7 @@ Public prediction submission is intentional. If a valid access token is present,
 
 ### 4.3 Admin panel
 
+- Provide access to every user-panel route and API under the administrator's own account.
 - Route non-admin users away from `/admin`; enforce all admin mutations again on the API.
 - Show totals for listings, predictions, and users plus most-searched localities.
 - Show ML online/model-loaded state, model identity, training time when available, row counts, and metrics when supplied by the ML metadata.

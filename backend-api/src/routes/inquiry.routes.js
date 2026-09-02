@@ -5,7 +5,7 @@ import { createInquirySchema, updateInquirySchema } from "../validators/inquiry.
 import { allInquiries, createInquiry, myInquiries, updateInquiry } from "../controllers/inquiry.controller.js";
 
 const router = Router();
-router.use(authenticate);
+router.use(authenticate, requireRole("user", "admin"));
 router.get("/", myInquiries);
 router.post("/", validate(createInquirySchema), createInquiry);
 router.get("/admin", requireRole("admin"), allInquiries);

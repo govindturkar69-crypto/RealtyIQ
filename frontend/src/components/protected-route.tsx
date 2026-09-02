@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function ProtectedRoute({ children, role, excludeRole }: { children: React.ReactNode; role?: "admin"; excludeRole?: "admin" }) {
+export function ProtectedRoute({ children, role }: { children: React.ReactNode; role?: "admin" }) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -12,10 +12,10 @@ export function ProtectedRoute({ children, role, excludeRole }: { children: Reac
     if (loading) return;
     if (!user) router.replace("/login");
     else if (role && user.role !== role) router.replace("/dashboard");
-    else if (excludeRole && user.role === excludeRole) router.replace("/admin");
-  }, [user, loading, role, excludeRole, router]);
+    else if (!role && !["user", "admin"].includes(user.role)) router.replace("/");
+  }, [user, loading, role, router]);
 
-  if (loading || !user || (role && user.role !== role) || (excludeRole && user.role === excludeRole)) {
+  if (loading || !user || (role && user.role !== role) || (!role && !["user", "admin"].includes(user.role))) {
     return <div className="mx-auto max-w-4xl px-4 py-12"><Skeleton className="h-64 w-full" /></div>;
   }
   return <>{children}</>;

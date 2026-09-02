@@ -77,7 +77,7 @@ CSV headers use the same camelCase names. Defaults exist for city, property type
 | POST | `/api/predict` | Public; optional auth | Model input; returns ML result plus `predictionId` and persists it |
 | GET | `/api/predict/options` | Public | ML categorical options/numeric ranges; locality fallback from MongoDB |
 | GET | `/api/predict/feature-importance?top=10` | Public | Ranked model feature importance |
-| GET | `/api/predict/history` | Authenticated | Latest 50 predictions owned by user |
+| GET | `/api/predict/history` | User or admin | Latest 50 predictions owned by the current account |
 | GET | `/api/predict/:id` | Public | Stored prediction used for share links |
 
 Prediction input:
@@ -112,17 +112,17 @@ Deal semantics: listed price more than 7% below prediction is `underpriced`, mor
 
 | Method | Path | Access | Result |
 |---|---|---|---|
-| GET | `/api/favorites` | Authenticated | Populated favorite listings |
-| GET | `/api/favorites/ids` | Authenticated | Favorite listing IDs |
-| POST | `/api/favorites/:id` | Authenticated | Adds listing if not already present |
-| DELETE | `/api/favorites/:id` | Authenticated | Removes listing reference |
+| GET | `/api/favorites` | User or admin | Populated favorite listings |
+| GET | `/api/favorites/ids` | User or admin | Favorite listing IDs |
+| POST | `/api/favorites/:id` | User or admin | Adds listing if not already present |
+| DELETE | `/api/favorites/:id` | User or admin | Removes listing reference |
 
 ## 8. Saved searches and alerts
 
 | Method | Path | Access | Request / result |
 |---|---|---|---|
-| GET | `/api/saved-searches` | Authenticated | Owned searches with computed `matchCount` and `newMatches` |
-| POST | `/api/saved-searches` | Authenticated | `{ name, filters }` |
+| GET | `/api/saved-searches` | User or admin | Owned searches with computed `matchCount` and `newMatches` |
+| POST | `/api/saved-searches` | User or admin | `{ name, filters }` |
 | POST | `/api/saved-searches/:id/mark-notified` | Owner | Stores current match count as acknowledged |
 | DELETE | `/api/saved-searches/:id` | Owner | Deletes saved search |
 
@@ -132,8 +132,8 @@ Stored filters correspond to supported listing query fields. Alerts are computed
 
 | Method | Path | Access | Request / result |
 |---|---|---|---|
-| GET | `/api/inquiries` | Authenticated | User's inquiries populated with listing summary |
-| POST | `/api/inquiries` | Authenticated | `{ listingId, message }`, message length 10–1000 |
+| GET | `/api/inquiries` | User or admin | Current account's inquiries populated with listing summary |
+| POST | `/api/inquiries` | User or admin | `{ listingId, message }`, message length 10–1000 |
 | GET | `/api/inquiries/admin` | Admin | All inquiries with user/listing summaries |
 | PATCH | `/api/inquiries/admin/:id` | Admin | `{ status: "new" | "contacted" | "closed" }` |
 

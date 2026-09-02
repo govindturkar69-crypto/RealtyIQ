@@ -18,9 +18,8 @@ const userLinks = [
 ];
 const adminLinks = [
   { href: "/admin", label: "Admin panel" },
-  { href: "/listings", label: "Properties" },
-  { href: "/trends", label: "Analytics" },
-  { href: "/map", label: "Market map" },
+  { href: "/dashboard", label: "My dashboard" },
+  ...userLinks,
 ];
 
 export function Navbar() {
@@ -31,7 +30,7 @@ export function Navbar() {
   const isAdmin = user?.role === "admin";
 
   useEffect(() => {
-    if (!user || isAdmin) { setAlerts(0); return; }
+    if (!user || !["user", "admin"].includes(user.role)) { setAlerts(0); return; }
     const load = () => api.savedSearches()
       .then((r) => setAlerts((r as { items: { newMatches: number }[] }).items.reduce((sum, item) => sum + item.newMatches, 0)))
       .catch(() => setAlerts(0));
@@ -54,13 +53,13 @@ export function Navbar() {
               {l.label}
             </Link>
           ))}
-          {user && !isAdmin && (
+          {user && ["user", "admin"].includes(user.role) && (
             <Link href="/favorites" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent">Favorites</Link>
           )}
-          {user && !isAdmin && (
+          {user && ["user", "admin"].includes(user.role) && (
             <Link href="/saved" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent">Saved</Link>
           )}
-          {user && !isAdmin && (
+          {user && ["user", "admin"].includes(user.role) && (
             <Link href="/notifications" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent">
               Alerts {alerts > 0 && <span className="ml-1 rounded-full bg-primary px-1.5 py-0.5 text-xs text-primary-foreground" aria-label={`${alerts} new matches`}>{alerts}</span>}
             </Link>
