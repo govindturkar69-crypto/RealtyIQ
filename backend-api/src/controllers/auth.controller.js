@@ -1,6 +1,7 @@
 import { User } from "../models/User.js";
 import { Prediction } from "../models/Prediction.js";
 import { SavedSearch } from "../models/SavedSearch.js";
+import { Inquiry } from "../models/Inquiry.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
@@ -106,6 +107,7 @@ export const deleteAccount = asyncHandler(async (req, res) => {
   await Promise.all([
     Prediction.deleteMany({ user: userId }),
     SavedSearch.deleteMany({ user: userId }),
+    Inquiry.deleteMany({ user: userId }),
     User.findByIdAndDelete(userId),
   ]);
   res.json({ success: true, message: "Account and all associated data have been deleted" });

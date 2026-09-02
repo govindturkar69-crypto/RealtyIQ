@@ -1,4 +1,5 @@
-export interface User { _id: string; name: string; email: string; role: "user" | "admin"; isActive: boolean; createdAt?: string; }
+export type UserRole = "user" | "agent" | "broker" | "admin";
+export interface User { _id: string; name: string; email: string; role: UserRole; isActive: boolean; createdAt?: string; }
 
 export interface AuthResponse { user: User; accessToken: string; refreshToken: string; }
 
@@ -45,9 +46,21 @@ export interface AdminStats {
   topSearchedLocalities: { locality: string; searches: number; avgPredicted: number }[];
 }
 
+export interface MlStatus {
+  online: boolean; model_loaded: boolean; model_name?: string; trained_at?: string;
+  metrics?: { r2?: number; mae?: number; rmse?: number; mape?: number };
+  n_train?: number; n_test?: number;
+}
+
 export interface SavedSearch {
   _id: string; name: string; filters: Record<string, unknown>;
   matchCount: number; newMatches: number; createdAt: string;
+}
+
+export interface Inquiry {
+  _id: string; message: string; status: "new" | "contacted" | "closed"; createdAt: string;
+  listing: Pick<Listing, "_id" | "title" | "locality">;
+  user?: Pick<User, "_id" | "name" | "email">;
 }
 
 export interface RankingItem { locality: string; avgPricePerSqft: number; listings: number; }

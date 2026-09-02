@@ -4,6 +4,28 @@ import { ApiError } from "../utils/ApiError.js";
 import { buildListingQuery, buildSort, paginate } from "../lib/queryBuilder.js";
 import { mlService } from "../services/ml.service.js";
 import { computeDealVerdict } from "../lib/deal.js";
+import { parse } from "csv-parse/sync";
+import { createListingSchema } from "../validators/listing.schema.js";
+
+export function parseListingCsv(csv) {
+  let rows;
+  try { rows = parse(csv, { columns: true, skip_empty_lines: true, trim: true }); }
+  catch { throw ApiError.badRequest("Invalid CSV file"); }
+  if (!rows.length || rows.length > 1000) throw ApiError.badRequest("CSV must contain 1–1000 listings");
+  return rows.map((row, index) => {
+    const result = createListingSchema.safeParse({
+      title: row.title, city: row.city || "Bengaluru", locality: row.locality,
+      propertyType: row.propertyType || "Apartment", areaType: row.areaType || undefined,
+      availabilityStatus: row.availabilityStatus || "Ready To Move",
+      totalSqft: Number(row.totalSqft), bhk: Number(row.bhk), bath: Number(row.bath),
+      balcony: Number(row.balcony || 0), price: Number(row.price),
+      description: row.description || undefined,
+      images: row.images ? row.images.split(";").map((url) => url.trim()).filter(Boolean) : undefined,
+    });
+    if (!result.success) throw ApiError.badRequest(`Invalid CSV row ${index + 2}`, result.error.issues);
+    return result.data;
+  });
+}
 
 export const listListings = asyncHandler(async (req, res) => {
   const filter = buildListingQuery(req.query);
@@ -26,6 +48,14 @@ export const createListing = asyncHandler(async (req, res) => {
   const pricePerSqft = Math.round(req.body.price / req.body.totalSqft);
   const listing = await Listing.create({ ...req.body, pricePerSqft, createdBy: req.user?.sub });
   res.status(201).json(listing);
+});
+
+export const importListings = asyncHandler(async (req, res) => {
+  const rows = parseListingCsv(req.body).map((row) => ({
+    ...row, pricePerSqft: Math.round(row.price / row.totalSqft), createdBy: req.user.sub,
+  }));
+  await Listing.insertMany(rows);
+  res.status(201).json({ imported: rows.length });
 });
 
 export const updateListing = asyncHandler(async (req, res) => {

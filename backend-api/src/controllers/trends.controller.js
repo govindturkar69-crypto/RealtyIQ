@@ -3,6 +3,7 @@ import { Prediction } from "../models/Prediction.js";
 import { User } from "../models/User.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { buildTrendPipeline, buildLocalityRankingPipeline } from "../lib/trends.js";
+import { mlService } from "../services/ml.service.js";
 
 export const priceTrends = asyncHandler(async (req, res) => {
   const series = await Listing.aggregate(buildTrendPipeline({
@@ -30,4 +31,13 @@ export const adminStats = asyncHandler(async (req, res) => {
     ]),
   ]);
   res.json({ totals: { listings, predictions, users }, topSearchedLocalities: topSearched });
+});
+
+export const mlStatus = asyncHandler(async (req, res) => {
+  try {
+    const [health, info] = await Promise.all([mlService.health(), mlService.modelInfo()]);
+    res.json({ online: true, ...health, ...info });
+  } catch {
+    res.json({ online: false, model_loaded: false });
+  }
 });

@@ -25,4 +25,5 @@ export const mlService = {
   featureImportance: (top = 15) => call(`/feature-importance?top=${top}`, {}, 5000),
   localities: () => call("/localities", {}, 5000),
   health: () => call("/health", {}, 3000),
+  modelInfo: () => call("/model-info", {}, 3000),
 };

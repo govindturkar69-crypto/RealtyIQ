@@ -6,8 +6,8 @@ import type { User } from "./types";
 interface AuthCtx {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  signup: (name: string, email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
 }
@@ -28,11 +28,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const r = await api.login({ email, password });
     setTokens(r.accessToken, r.refreshToken);
     setUser(r.user);
+    return r.user;
   }
   async function signup(name: string, email: string, password: string) {
     const r = await api.signup({ name, email, password });
     setTokens(r.accessToken, r.refreshToken);
     setUser(r.user);
+    return r.user;
   }
   async function logout() {
     try { await api.logout(); } catch { /* local logout must still succeed */ }

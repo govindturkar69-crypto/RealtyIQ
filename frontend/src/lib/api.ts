@@ -1,5 +1,5 @@
 "use client";
-import type { AuthResponse } from "./types";
+import type { AuthResponse, UserRole } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -56,7 +56,7 @@ export const api = {
   logout: () => apiFetch("/api/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) }),
   deleteAccount: () => apiFetch("/api/auth/me", { method: "DELETE" }),
   users: () => apiFetch("/api/auth/admin/users"),
-  manageUser: (id: string, patch: { role?: "user" | "admin"; isActive?: boolean }) =>
+  manageUser: (id: string, patch: { role?: UserRole; isActive?: boolean }) =>
     apiFetch(`/api/auth/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   predict: (b: Record<string, unknown>) => apiFetch("/api/predict", { method: "POST", body: JSON.stringify(b) }),
   featureImportance: () => apiFetch("/api/predict/feature-importance?top=10"),
@@ -71,14 +71,20 @@ export const api = {
   deleteSavedSearch: (id: string) => apiFetch(`/api/saved-searches/${id}`, { method: "DELETE" }),
   localities: () => apiFetch("/api/predict/options"),
   adminStats: () => apiFetch("/api/trends/admin/stats"),
+  mlStatus: () => apiFetch("/api/trends/admin/ml-status"),
   listingDeal: (id: string) => apiFetch(`/api/listings/${id}/deal`),
   createListing: (b: unknown) => apiFetch("/api/listings", { method: "POST", body: JSON.stringify(b) }),
   updateListing: (id: string, b: unknown) => apiFetch(`/api/listings/${id}`, { method: "PATCH", body: JSON.stringify(b) }),
   deleteListing: (id: string) => apiFetch(`/api/listings/${id}`, { method: "DELETE" }),
+  importListings: (csv: string) => apiFetch<{ imported: number }>("/api/listings/import", { method: "POST", headers: { "Content-Type": "text/csv" }, body: csv }),
   markSavedNotified: (id: string) => apiFetch(`/api/saved-searches/${id}/mark-notified`, { method: "POST" }),
   favorites: () => apiFetch("/api/favorites"),
   favoriteIds: () => apiFetch("/api/favorites/ids"),
   addFavorite: (id: string) => apiFetch(`/api/favorites/${id}`, { method: "POST" }),
   removeFavorite: (id: string) => apiFetch(`/api/favorites/${id}`, { method: "DELETE" }),
   getPrediction: (id: string) => apiFetch(`/api/predict/${id}`),
+  inquiries: () => apiFetch("/api/inquiries"),
+  createInquiry: (listingId: string, message: string) => apiFetch("/api/inquiries", { method: "POST", body: JSON.stringify({ listingId, message }) }),
+  adminInquiries: () => apiFetch("/api/inquiries/admin"),
+  updateInquiry: (id: string, status: "new" | "contacted" | "closed") => apiFetch(`/api/inquiries/admin/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
 };

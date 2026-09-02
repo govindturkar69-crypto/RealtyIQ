@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Bath, BedDouble, Building, Calendar, Car, Maximize, MapPin } from "lucide-react";
+import { ArrowLeft, Bath, BedDouble, Building, Calendar, Car, Maximize, MapPin, MessageSquare } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { DealResult, Listing, TrendPoint } from "@/lib/types";
 import { formatINR } from "@/lib/utils";
@@ -16,6 +17,8 @@ import { EmiCalculator } from "@/components/emi-calculator";
 import { RecentlyViewed } from "@/components/listings/recently-viewed";
 import { pushRecent } from "@/lib/recently-viewed";
 import { DealBadge } from "@/components/results/deal-badge";
+import { InvestmentRoiCalculator } from "@/components/investment-roi-calculator";
+import { useAuth } from "@/lib/auth-context";
 
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +26,14 @@ export default function ListingDetail() {
   const [trend, setTrend] = useState<TrendPoint[] | null>(null);
   const [deal, setDeal] = useState<DealResult | null>(null);
   const [error, setError] = useState(false);
+  const [message, setMessage] = useState("");
+  const { user } = useAuth();
+
+  async function inquire() {
+    if (!listing) return;
+    try { await api.createInquiry(listing._id, message); setMessage(""); toast.success("Inquiry sent"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Could not send inquiry"); }
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -111,6 +122,14 @@ export default function ListingDetail() {
       </Card>
 
       <div className="mt-6"><EmiCalculator price={listing.price} /></div>
+      <div className="mt-6"><InvestmentRoiCalculator price={listing.price} /></div>
+
+      <Card className="mt-6">
+        <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare className="h-5 w-5" /> Ask about this property</CardTitle></CardHeader>
+        <CardContent>
+          {user ? <div className="space-y-3"><textarea className="min-h-24 w-full rounded-md border bg-background p-3 text-sm" minLength={10} maxLength={1000} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Ask about availability, visits, documents, or pricing…" /><Button onClick={inquire} disabled={message.trim().length < 10}>Send inquiry</Button></div> : <Link href="/login"><Button>Log in to contact us</Button></Link>}
+        </CardContent>
+      </Card>
 
       <Card className="mt-6">
         <CardHeader><CardTitle>Price trend — {listing.locality}</CardTitle></CardHeader>

@@ -25,6 +25,6 @@ export const changePasswordSchema = z.object({
 });
 
 export const manageUserSchema = z.object({
-  role: z.enum(["user", "admin"]).optional(),
+  role: z.enum(["user", "agent", "broker", "admin"]).optional(),
   isActive: z.boolean().optional(),
 }).refine((v) => v.role !== undefined || v.isActive !== undefined, "No changes supplied");

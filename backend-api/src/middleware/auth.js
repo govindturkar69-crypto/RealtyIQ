@@ -8,9 +8,11 @@ export async function authenticate(req, res, next) {
   if (!token) return next(ApiError.unauthorized("Missing bearer token"));
   try {
     req.user = verifyAccessToken(token);
-    if (!(await User.exists({ _id: req.user.sub, isActive: { $ne: false } }))) {
+    const account = await User.findOne({ _id: req.user.sub, isActive: { $ne: false } }).select("role").lean();
+    if (!account) {
       throw ApiError.forbidden("Account disabled or unavailable");
     }
+    req.user.role = account.role;
     next();
   } catch (e) {
     next(e);
