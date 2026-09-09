@@ -45,12 +45,22 @@ export default function ResultsPage() {
   const [similar, setSimilar] = useState<Listing[] | null>(null);
 
   useEffect(() => {
-    const raw = typeof window !== "undefined" ? sessionStorage.getItem("riq_prediction") : null;
-    if (!raw) { router.replace("/predict"); return; }
-    const parsed = JSON.parse(raw) as Stored;
-    setData(parsed);
+    let raw: string | null = null;
+    try {
+      raw = typeof window !== "undefined" ? sessionStorage.getItem("riq_prediction") : null;
+    } catch {
+      router.replace("/predict");
+      return;
+    }
+    const stored = parseStoredPrediction(raw, (value) => storedPredictionSchema.safeParse(value));
+    if (!stored) {
+      try { sessionStorage.removeItem("riq_prediction"); } catch { /* storage may be unavailable */ }
+      router.replace("/predict");
+      return;
+    }
+    setData(stored);
     api.featureImportance().then((f) => setFeatures(f as FeatureImportance[])).catch(() => setFeatures([]));
-    api.listings(`?locality=${encodeURIComponent(parsed.input.location)}&limit=3`)
+    api.listings(`?locality=${encodeURIComponent(stored.input.location)}&limit=3`)
       .then((r) => setSimilar((r as Paginated<Listing>).items)).catch(() => setSimilar([]));
   }, [router]);
 
