@@ -14,12 +14,29 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfidenceBar } from "@/components/results/confidence-bar";
 import { generateValuationPdf } from "@/lib/pdf";
+import { parseStoredPrediction } from "@/lib/prediction-storage";
 import { FeatureImportanceChart } from "@/components/charts/feature-importance-chart";
 import { Result3D } from "@/components/three/result-3d";
 import { ListingCard } from "@/components/listings/listing-card";
 import { EmiCalculator } from "@/components/emi-calculator";
+import { predictSchema } from "@/lib/schemas";
+import { z } from "zod";
 
 interface Stored { input: PredictInput; result: PredictionResult; }
+
+const storedPredictionSchema = z.object({
+  input: predictSchema,
+  result: z.object({
+    predicted_price: z.number().finite(),
+    confidence_low: z.number().finite(),
+    confidence_high: z.number().finite(),
+    confidence_interval_pct: z.number().finite(),
+    price_per_sqft: z.number().finite(),
+    currency: z.string().min(1),
+    model_name: z.string().min(1),
+    predictionId: z.string().regex(/^[A-Za-z0-9_-]{40,}$/).optional(),
+  }).strict(),
+}).strict();
 
 export default function ResultsPage() {
   const router = useRouter();
