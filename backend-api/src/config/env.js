@@ -43,6 +43,9 @@ export const env = {
     windowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 60 * 1000),
     max: Number(process.env.AUTH_RATE_LIMIT_MAX || 5),
   },
+  shareTokenTtlMs: Number(process.env.SHARE_TOKEN_TTL_MS || 7 * 24 * 60 * 60 * 1000),
+  legacyShareGraceMs: Number(process.env.LEGACY_SHARE_GRACE_DAYS || 30) * 24 * 60 * 60 * 1000,
+  predictionRetentionDays: Number(process.env.PREDICTION_RETENTION_DAYS || 365),
   isProd,
 };
 

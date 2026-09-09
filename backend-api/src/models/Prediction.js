@@ -10,6 +10,11 @@ const predictionSchema = new mongoose.Schema(
     pricePerSqft: { type: Number },
     modelName: { type: String },
     locality: { type: String, index: true },
+    isAnonymous: { type: Boolean, default: false, index: true },
+    shareTokenHash: { type: String, index: true, select: false },
+    shareExpiresAt: { type: Date },
+    shareRevokedAt: { type: Date },
+    expiresAt: { type: Date, index: true, expires: 0 },
   },
   { timestamps: true }
 );

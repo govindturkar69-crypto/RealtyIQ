@@ -1,13 +1,18 @@
 import { Prediction } from "../models/Prediction.js";
+import mongoose from "mongoose";
 import { mlService } from "../services/ml.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { Listing } from "../models/Listing.js";
+import { env } from "../config/env.js";
+import { createShareToken, hashToken } from "../utils/tokenHash.js";
 
 export const predict = asyncHandler(async (req, res) => {
   const result = await mlService.predict(req.body);
+  const share = createShareToken(env.shareTokenTtlMs);
   const record = await Prediction.create({
     user: req.user?.sub,
+    isAnonymous: !req.user,
     input: req.body,
     predictedPrice: result.predicted_price,
     confidenceLow: result.confidence_low,
@@ -15,8 +20,11 @@ export const predict = asyncHandler(async (req, res) => {
     pricePerSqft: result.price_per_sqft,
     modelName: result.model_name,
     locality: req.body.location,
+    shareTokenHash: share.hash,
+    shareExpiresAt: share.expiresAt,
+    expiresAt: new Date(Date.now() + (req.user ? env.predictionRetentionDays : 1) * 24 * 60 * 60 * 1000),
   });
-  res.json({ ...result, predictionId: record._id });
+  res.json({ ...result, predictionId: share.token });
 });
 
 export const featureImportance = asyncHandler(async (req, res) => {
@@ -42,8 +50,34 @@ export const history = asyncHandler(async (req, res) => {
   res.json({ items });
 });
 
+export function isLegacyShareable(record, now = new Date(), graceMs = env.legacyShareGraceMs) {
+  return Boolean(
+    record &&
+    !record.shareTokenHash &&
+    !record.shareRevokedAt &&
+    (!record.expiresAt || new Date(record.expiresAt) > now) &&
+    now - new Date(record.createdAt) <= graceMs,
+  );
+}
+
+export async function findPublicPrediction(id, now = new Date(), model = Prediction) {
+  if (/^[A-Za-z0-9_-]{40,}$/.test(id)) {
+    return model.findOne({
+      shareTokenHash: hashToken(id),
+      shareRevokedAt: { $exists: false },
+      shareExpiresAt: { $gt: now },
+      expiresAt: { $gt: now },
+    }).select("+shareTokenHash").lean();
+  }
+  if (/^[a-f\d]{24}$/i.test(id)) {
+    const record = await model.findById(id).select("+shareTokenHash").lean();
+    return isLegacyShareable(record, now) ? record : null;
+  }
+  return null;
+}
+
 export const getPredictionById = asyncHandler(async (req, res) => {
-  const record = await Prediction.findById(req.params.id).lean();
+  const record = await findPublicPrediction(req.params.id);
   if (!record) throw ApiError.notFound("Prediction not found");
   res.json({
     input: record.input,
@@ -55,4 +89,29 @@ export const getPredictionById = asyncHandler(async (req, res) => {
     locality: record.locality,
     createdAt: record.createdAt,
   });
+});
+
+async function ownedPrediction(req) {
+  if (!mongoose.isValidObjectId(req.params.id)) throw ApiError.notFound("Prediction not found");
+  const record = await Prediction.findById(req.params.id).select("+shareTokenHash");
+  if (!record || (req.user.role !== "admin" && String(record.user) !== String(req.user.sub))) throw ApiError.notFound("Prediction not found");
+  if (record.expiresAt && record.expiresAt <= new Date()) throw ApiError.notFound("Prediction not found");
+  return record;
+}
+
+export const sharePrediction = asyncHandler(async (req, res) => {
+  const record = await ownedPrediction(req);
+  const share = createShareToken(env.shareTokenTtlMs);
+  record.shareTokenHash = share.hash;
+  record.shareExpiresAt = share.expiresAt;
+  record.shareRevokedAt = undefined;
+  await record.save();
+  res.json({ shareToken: share.token, expiresAt: record.shareExpiresAt });
+});
+
+export const revokeShare = asyncHandler(async (req, res) => {
+  const record = await ownedPrediction(req);
+  record.shareRevokedAt = new Date();
+  await record.save();
+  res.json({ success: true });
 });
