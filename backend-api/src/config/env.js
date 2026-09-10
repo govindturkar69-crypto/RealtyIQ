@@ -9,13 +9,23 @@ const DEV_FALLBACKS = {
   JWT_REFRESH_SECRET: "dev_refresh_secret_change_me",
 };
 
-function required(key) {
+const INSECURE_JWT_VALUES = new Set([
+  DEV_FALLBACKS.JWT_ACCESS_SECRET,
+  DEV_FALLBACKS.JWT_REFRESH_SECRET,
+  "change_me_access",
+  "change_me_refresh",
+]);
+const MIN_SECRET_LENGTH = 32;
+const isInsecureSecret = (value) => INSECURE_JWT_VALUES.has(value) || /^replace_with_/i.test(value) || /change[_-]?me/i.test(value) || /^(.)\1+$/.test(value);
+
+function required(key, { secret = false } = {}) {
   const val = process.env[key];
-  if (val && val.trim()) {
-    if (isProd && val === DEV_FALLBACKS[key]) {
-      throw new Error(`FATAL: ${key} is set to the insecure development default. Set a strong unique value.`);
+  const normalized = val?.trim();
+  if (normalized) {
+    if (isProd && secret && (normalized.length < MIN_SECRET_LENGTH || isInsecureSecret(normalized))) {
+      throw new Error(`FATAL: ${key} must be a unique random secret of at least ${MIN_SECRET_LENGTH} characters.`);
     }
-    return val;
+    return normalized;
   }
   if (isProd) {
     throw new Error(`FATAL: required env var ${key} is not set. Refusing to start in production.`);
@@ -29,8 +39,8 @@ export const env = {
   corsOrigin: process.env.CORS_ORIGIN || (isProd ? "" : "*"),
   mongoUri: required("MONGODB_URI"),
   jwt: {
-    accessSecret: required("JWT_ACCESS_SECRET"),
-    refreshSecret: required("JWT_REFRESH_SECRET"),
+    accessSecret: required("JWT_ACCESS_SECRET", { secret: true }),
+    refreshSecret: required("JWT_REFRESH_SECRET", { secret: true }),
     accessTtl: process.env.JWT_ACCESS_TTL || "15m",
     refreshTtl: process.env.JWT_REFRESH_TTL || "7d",
   },
@@ -46,8 +56,14 @@ export const env = {
   shareTokenTtlMs: Number(process.env.SHARE_TOKEN_TTL_MS || 7 * 24 * 60 * 60 * 1000),
   legacyShareGraceMs: Number(process.env.LEGACY_SHARE_GRACE_DAYS || 30) * 24 * 60 * 60 * 1000,
   predictionRetentionDays: Number(process.env.PREDICTION_RETENTION_DAYS || 365),
+  securityEventRetentionDays: Number(process.env.SECURITY_EVENT_RETENTION_DAYS || 365),
+  authCookieOnly: isProd || process.env.AUTH_COOKIE_ONLY === "true",
   isProd,
 };
+
+if (isProd && env.jwt.accessSecret === env.jwt.refreshSecret) {
+  throw new Error("FATAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different in production.");
+}
 
 if (isProd && (env.corsOrigin === "" || env.corsOrigin === "*")) {
   // eslint-disable-next-line no-console

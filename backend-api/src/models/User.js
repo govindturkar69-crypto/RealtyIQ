@@ -8,7 +8,9 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: ["user", "agent", "broker", "admin"], default: "user" },
     isActive: { type: Boolean, default: true },
+    tokenVersion: { type: Number, default: 0 },
     refreshTokens: { type: [String], default: [], select: false },
+    refreshTokenHashes: { type: [String], default: [], select: false },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Listing" }],
   },
   { timestamps: true }
@@ -24,6 +26,7 @@ userSchema.methods.toJSON = function () {
   const o = this.toObject();
   delete o.passwordHash;
   delete o.refreshTokens;
+  delete o.refreshTokenHashes;
   delete o.__v;
   return o;
 };

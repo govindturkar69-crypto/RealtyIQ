@@ -7,6 +7,7 @@ import routes from "./routes/index.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 import { apiLimiter } from "./middleware/rateLimiters.js";
 import { requestId } from "./middleware/requestId.js";
+import { csrfProtection } from "./middleware/csrf.js";
 
 export function createApp() {
   const app = express();
@@ -22,6 +23,7 @@ export function createApp() {
   }));
   app.use(cors({ origin: env.corsOrigin === "*" ? true : env.corsOrigin.split(",").filter(Boolean), credentials: true }));
   app.use(express.json({ limit: "1mb" }));
+  app.use(csrfProtection);
   app.use(morgan(env.isProd ? "combined" : "dev"));
 
   app.get("/health", (req, res) => res.json({ status: "ok", service: "backend-api", ts: Date.now() }));

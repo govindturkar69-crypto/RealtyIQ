@@ -1,14 +1,44 @@
 import { User } from "../models/User.js";
+import { randomUUID } from "node:crypto";
 import { Prediction } from "../models/Prediction.js";
 import { SavedSearch } from "../models/SavedSearch.js";
 import { Inquiry } from "../models/Inquiry.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
+import { env } from "../config/env.js";
+import { getCookie, REFRESH_COOKIE, setAuthCookies, clearAuthCookies } from "../utils/authCookies.js";
+import { hashToken } from "../utils/tokenHash.js";
+import { recordSecurityEvent } from "../utils/securityEvent.js";
+import { logger } from "../utils/logger.js";
 
 function tokensFor(user) {
-  const payload = { sub: String(user._id), role: user.role, email: user.email };
+  const payload = { sub: String(user._id), role: user.role, email: user.email, ver: user.tokenVersion || 0, jti: randomUUID() };
   return { accessToken: signAccessToken(payload), refreshToken: signRefreshToken(payload) };
+}
+
+function authResponse(user, tokens) {
+  return env.authCookieOnly ? { user } : { user, ...tokens };
+}
+
+function refreshRotationConflict(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return error?.name === "VersionError"
+    || error?.code === 112
+    || error?.hasErrorLabel?.("TransientTransactionError")
+    || /write conflict|transient.?transaction.?error/.test(message);
+}
+
+async function invalidateRefreshSession(userId, req, user) {
+  try {
+    await User.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 }, $set: { refreshTokens: [], refreshTokenHashes: [] } });
+  } catch (error) {
+    logger.error("refresh_invalidation_failed", { requestId: req?.id, errorType: error?.name || "Error" });
+  }
+  await recordSecurityEvent(req, "refresh_token_reuse", user, {}, {
+    actorUserId: null, targetUserId: userId, resourceType: "session", action: "refresh_reuse",
+    result: "denied", reasonCode: "token_reuse",
+  });
 }
 
 export const signup = asyncHandler(async (req, res) => {
@@ -17,33 +47,76 @@ export const signup = asyncHandler(async (req, res) => {
   const user = new User({ name, email });
   await user.setPassword(password);
   const { accessToken, refreshToken } = tokensFor(user);
-  user.refreshTokens = [refreshToken];
+  user.refreshTokens = [];
+  user.refreshTokenHashes = [hashToken(refreshToken)];
   await user.save();
-  res.status(201).json({ user, accessToken, refreshToken });
+  setAuthCookies(res, { accessToken, refreshToken });
+  await recordSecurityEvent(req, "signup", user, {}, {
+    actorUserId: null, targetUserId: user._id, resourceType: "user", resourceId: user._id,
+    action: "create", result: "success",
+  });
+  res.status(201).json(authResponse(user, { accessToken, refreshToken }));
 });
 
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email }).select("+passwordHash +refreshTokens");
-  if (!user || !(await user.verifyPassword(password))) throw ApiError.unauthorized("Invalid credentials");
+  const user = await User.findOne({ email }).select("+passwordHash +refreshTokens +refreshTokenHashes");
+  if (!user || !(await user.verifyPassword(password))) {
+    await recordSecurityEvent(req, "login_failed", null, {}, {
+      actorUserId: null, targetUserId: null, resourceType: "authentication", action: "login",
+      result: "failure", reasonCode: "invalid_credentials",
+    });
+    throw ApiError.unauthorized("Invalid credentials");
+  }
   if (!user.isActive) throw ApiError.forbidden("Account disabled");
   const { accessToken, refreshToken } = tokensFor(user);
-  user.refreshTokens = [...(user.refreshTokens || []).slice(-4), refreshToken];
+  user.refreshTokens = [];
+  user.refreshTokenHashes = [...(user.refreshTokenHashes || []), hashToken(refreshToken)].slice(-5);
   await user.save();
-  res.json({ user, accessToken, refreshToken });
+  setAuthCookies(res, { accessToken, refreshToken });
+  await recordSecurityEvent(req, "login_success", user, {}, {
+    actorUserId: user._id, targetUserId: user._id, resourceType: "authentication", action: "login", result: "success",
+  });
+  res.json(authResponse(user, { accessToken, refreshToken }));
 });
 
 export const refresh = asyncHandler(async (req, res) => {
-  const { refreshToken } = req.body;
+  const refreshToken = getCookie(req, REFRESH_COOKIE) || req.body?.refreshToken;
+  if (!refreshToken) { clearAuthCookies(res); throw ApiError.unauthorized("Invalid refresh token"); }
   let decoded;
-  try { decoded = verifyRefreshToken(refreshToken); } catch { throw ApiError.unauthorized("Invalid refresh token"); }
-  const user = await User.findById(decoded.sub).select("+refreshTokens");
-  if (!user || !(user.refreshTokens || []).includes(refreshToken)) throw ApiError.unauthorized("Refresh token revoked");
-  if (!user.isActive) throw ApiError.forbidden("Account disabled");
+  try { decoded = verifyRefreshToken(refreshToken); } catch { clearAuthCookies(res); throw ApiError.unauthorized("Invalid refresh token"); }
+  const user = await User.findById(decoded.sub).select("+refreshTokens +refreshTokenHashes");
+  if (!user) { clearAuthCookies(res); throw ApiError.unauthorized("Refresh token revoked"); }
+  if (!user.isActive) { clearAuthCookies(res); throw ApiError.forbidden("Account disabled"); }
+  if ((decoded.ver || 0) !== (user.tokenVersion || 0)) { clearAuthCookies(res); throw ApiError.unauthorized("Refresh token revoked"); }
+  const presentedHash = hashToken(refreshToken);
+  const matches = (user.refreshTokenHashes || []).includes(presentedHash) || (user.refreshTokens || []).includes(refreshToken);
+  if (!matches) {
+    await invalidateRefreshSession(user._id, req, user);
+    clearAuthCookies(res);
+    throw ApiError.unauthorized("Refresh token revoked");
+  }
   const tokens = tokensFor(user);
-  user.refreshTokens = [...user.refreshTokens.filter((t) => t !== refreshToken).slice(-4), tokens.refreshToken];
-  await user.save();
-  res.json(tokens);
+  const nextHashes = [...(user.refreshTokenHashes || []).filter((hash) => hash !== presentedHash), hashToken(tokens.refreshToken)].slice(-5);
+  let rotated;
+  try {
+    rotated = await User.updateOne(
+      { _id: user._id, tokenVersion: user.tokenVersion || 0, $or: [{ refreshTokenHashes: presentedHash }, { refreshTokens: refreshToken }] },
+      { $set: { refreshTokens: [], refreshTokenHashes: nextHashes } },
+    );
+  } catch (error) {
+    if (!refreshRotationConflict(error)) throw error;
+    await invalidateRefreshSession(user._id, req, user);
+    clearAuthCookies(res);
+    throw ApiError.unauthorized("Refresh token revoked");
+  }
+  if (rotated.modifiedCount !== 1) {
+    await invalidateRefreshSession(user._id, req, user);
+    clearAuthCookies(res);
+    throw ApiError.unauthorized("Refresh token revoked");
+  }
+  setAuthCookies(res, tokens);
+  res.json(env.authCookieOnly ? {} : tokens);
 });
 
 export const me = asyncHandler(async (req, res) => {
@@ -64,8 +137,15 @@ export const changePassword = asyncHandler(async (req, res) => {
     throw ApiError.unauthorized("Current password is incorrect");
   }
   await user.setPassword(req.body.newPassword);
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   user.refreshTokens = [];
+  user.refreshTokenHashes = [];
   await user.save();
+  clearAuthCookies(res);
+  await recordSecurityEvent(req, "password_changed", user, {}, {
+    actorUserId: user._id, targetUserId: user._id, resourceType: "user", resourceId: user._id,
+    action: "password_change", result: "success",
+  });
   res.json({ success: true });
 });
 
@@ -89,12 +169,18 @@ export const manageUser = asyncHandler(async (req, res) => {
 });
 
 export const logout = asyncHandler(async (req, res) => {
-  const { refreshToken } = req.body || {};
-  const user = await User.findById(req.user.sub).select("+refreshTokens");
-  if (user && refreshToken) {
-    user.refreshTokens = (user.refreshTokens || []).filter((t) => t !== refreshToken);
+  const user = await User.findById(req.user.sub).select("+refreshTokens +refreshTokenHashes");
+  if (user) {
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    user.refreshTokens = [];
+    user.refreshTokenHashes = [];
     await user.save();
+    await recordSecurityEvent(req, "logout", user, {}, {
+      actorUserId: user._id, targetUserId: user._id, resourceType: "session", resourceId: user._id,
+      action: "logout", result: "success",
+    });
   }
+  clearAuthCookies(res);
   res.json({ success: true });
 });
 
