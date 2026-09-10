@@ -10,6 +10,8 @@ import { Pagination } from "./pagination";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SaveSearchButton } from "./save-search-button";
+import { Button } from "@/components/ui/button";
+import { localityOptionsSchema, paginatedListingSchema, parseDiscoveryPayload } from "@/lib/discovery-schemas";
 
 const EMPTY: ListingFilters = { search: "", locality: "", propertyType: "", bhk: "", bath: "", availabilityStatus: "", minSqft: "", maxSqft: "", minPrice: "", maxPrice: "", sort: "newest" };
 
@@ -20,11 +22,16 @@ export function ListingsBrowser() {
   const [data, setData] = useState<Paginated<Listing> | null>(null);
   const [loading, setLoading] = useState(true);
   const [localities, setLocalities] = useState<string[]>([]);
+  const [localityError, setLocalityError] = useState(false);
 
-  useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/listings/meta/localities`)
-      .then((r) => r.json()).then((d) => setLocalities(d.localities || [])).catch(() => {});
+  const loadLocalities = useCallback(() => {
+    setLocalityError(false);
+    api.listingLocalities()
+      .then((d) => setLocalities(parseDiscoveryPayload(localityOptionsSchema, d).localities))
+      .catch(() => { setLocalities([]); setLocalityError(true); });
   }, []);
+
+  useEffect(() => { loadLocalities(); }, [loadLocalities]);
 
   const qs = useMemo(() => {
     const p = new URLSearchParams();
@@ -47,7 +54,7 @@ export function ListingsBrowser() {
   const load = useCallback(() => {
     setLoading(true);
     api.listings(qs)
-      .then((r) => setData(r as Paginated<Listing>))
+      .then((r) => setData(parseDiscoveryPayload(paginatedListingSchema, r) as Paginated<Listing>))
       .catch((e) => toast.error(e instanceof Error ? e.message : "Failed to load listings"))
       .finally(() => setLoading(false));
   }, [qs]);
@@ -62,6 +69,7 @@ export function ListingsBrowser() {
   return (
     <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
       <aside className="lg:sticky lg:top-20 lg:self-start">
+        {localityError && <div className="mb-3 rounded-md border p-3 text-sm" role="alert"><p className="text-muted-foreground">Localities are temporarily unavailable.</p><Button className="mt-2" size="sm" variant="outline" onClick={loadLocalities}>Retry localities</Button></div>}
         <Filters value={filters} localities={localities} onChange={patch} onReset={() => { setPage(1); setFilters(EMPTY); }} />
       </aside>
       <div>

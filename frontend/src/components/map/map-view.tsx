@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -7,6 +7,7 @@ import "leaflet.heat";
 import { api } from "@/lib/api";
 import type { Listing, Paginated } from "@/lib/types";
 import { formatINR } from "@/lib/utils";
+import { paginatedListingSchema, parseDiscoveryPayload } from "@/lib/discovery-schemas";
 
 const BLR: [number, number] = [12.9716, 77.5946];
 
@@ -31,11 +32,17 @@ function colorFor(ppsf: number) {
 
 export default function MapView() {
   const [listings, setListings] = useState<Listing[]>([]);
+  const requestGeneration = useRef(0);
 
   useEffect(() => {
+    const generation = ++requestGeneration.current;
     api.listings("?limit=400")
-      .then((r) => setListings((r as Paginated<Listing>).items.filter((l) => l.location?.lat && l.location?.lng)))
+      .then((r) => {
+        if (generation !== requestGeneration.current) return;
+        setListings((parseDiscoveryPayload(paginatedListingSchema, r) as Paginated<Listing>).items.filter((l) => l.location?.lat && l.location?.lng));
+      })
       .catch(() => {});
+    return () => { requestGeneration.current += 1; };
   }, []);
 
   const maxPpsf = Math.max(1, ...listings.map((l) => l.pricePerSqft));

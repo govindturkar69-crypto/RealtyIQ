@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, X, GitCompare } from "lucide-react";
@@ -12,9 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DealBadge } from "@/components/results/deal-badge";
+import { compareResponseSchema, listingSchema, paginatedListingSchema, parseDiscoveryPayload } from "@/lib/discovery-schemas";
 
 export function CompareTool() {
   const params = useSearchParams();
+  const searchGeneration = useRef(0);
+  const selectionGeneration = useRef(0);
+  const idsParam = params.get("ids") || "";
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Listing[]>([]);
   const [selected, setSelected] = useState<Listing[]>([]);
@@ -22,20 +26,29 @@ export function CompareTool() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const ids = params.get("ids");
-    if (ids) {
-      Promise.all(ids.split(",").slice(0, 3).map((id) => api.listing(id).catch(() => null)))
-        .then((ls) => setSelected(ls.filter(Boolean) as Listing[]));
-    }
-  }, [params]);
+    const generation = ++selectionGeneration.current;
+    if (!idsParam) return;
+    const ids = [...new Set(idsParam.split(",").filter((id) => /^[a-f\d]{24}$/i.test(id)))].slice(0, 3);
+    if (!ids.length) return;
+    Promise.all(ids.map((id) => api.listing(id)
+      .then((listing) => parseDiscoveryPayload(listingSchema, listing))
+      .catch(() => null)))
+      .then((ls) => { if (generation === selectionGeneration.current) setSelected(ls.filter(Boolean) as Listing[]); });
+    return () => { selectionGeneration.current += 1; };
+  }, [idsParam]);
 
   useEffect(() => {
-    if (!search) { setResults([]); return; }
+    const query = search.trim();
+    const generation = ++searchGeneration.current;
+    if (!query) { setResults([]); return; }
     const t = setTimeout(() => {
-      api.listings(`?search=${encodeURIComponent(search)}&limit=6`)
-        .then((r) => setResults((r as Paginated<Listing>).items)).catch(() => {});
+      api.listings(`?search=${encodeURIComponent(query)}&limit=6`)
+        .then((r) => {
+          if (generation !== searchGeneration.current) return;
+          setResults((parseDiscoveryPayload(paginatedListingSchema, r) as Paginated<Listing>).items);
+        }).catch(() => {});
     }, 300);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); searchGeneration.current += 1; };
   }, [search]);
 
   function add(l: Listing) {
@@ -50,7 +63,7 @@ export function CompareTool() {
     if (selected.length < 2) { toast.error("Select at least 2 properties"); return; }
     setLoading(true);
     try {
-      const res = (await api.compare(selected.map((s) => s._id))) as { items: CompareItem[] };
+      const res = parseDiscoveryPayload(compareResponseSchema, await api.compare(selected.map((s) => s._id)));
       setComparison(res.items);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Compare failed"); }
     finally { setLoading(false); }

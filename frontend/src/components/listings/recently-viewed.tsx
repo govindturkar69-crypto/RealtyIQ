@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import type { Listing } from "@/lib/types";
 import { getRecent } from "@/lib/recently-viewed";
 import { ListingCard } from "./listing-card";
+import { listingSchema, parseDiscoveryPayload } from "@/lib/discovery-schemas";
 
 export function RecentlyViewed({ excludeId }: { excludeId?: string }) {
   const [items, setItems] = useState<Listing[]>([]);
@@ -11,7 +12,7 @@ export function RecentlyViewed({ excludeId }: { excludeId?: string }) {
   useEffect(() => {
     const ids = getRecent().filter((id) => id !== excludeId).slice(0, 4);
     if (!ids.length) return;
-    Promise.all(ids.map((id) => api.listing(id).catch(() => null)))
+    Promise.all(ids.map((id) => api.listing(id).then((listing) => parseDiscoveryPayload(listingSchema, listing)).catch(() => null)))
       .then((ls) => setItems(ls.filter(Boolean) as Listing[]));
   }, [excludeId]);
 

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { TrendingUp } from "lucide-react";
 import { api } from "@/lib/api";
@@ -9,16 +9,18 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PriceTrendChart } from "@/components/charts/price-trend-chart";
 import { LocalityBarChart } from "@/components/charts/locality-bar-chart";
+import { parseDiscoveryPayload, rankingResponseSchema, trendsResponseSchema } from "@/lib/discovery-schemas";
 
 export default function TrendsPage() {
   const [ranking, setRanking] = useState<RankingItem[] | null>(null);
   const [localities, setLocalities] = useState<string[]>([]);
   const [locality, setLocality] = useState<string>("");
   const [series, setSeries] = useState<TrendPoint[] | null>(null);
+  const trendRequestGeneration = useRef(0);
 
   useEffect(() => {
     api.ranking().then((r) => {
-      const items = (r as { ranking: RankingItem[] }).ranking;
+      const items = parseDiscoveryPayload(rankingResponseSchema, r).ranking as RankingItem[];
       setRanking(items);
       const locs = items.map((i) => i.locality);
       setLocalities(locs);
@@ -28,9 +30,12 @@ export default function TrendsPage() {
 
   useEffect(() => {
     if (!locality) return;
+    const generation = ++trendRequestGeneration.current;
     setSeries(null);
     api.trends(`?locality=${encodeURIComponent(locality)}&months=24`)
-      .then((r) => setSeries((r as { series: TrendPoint[] }).series)).catch(() => setSeries([]));
+      .then((r) => { if (generation === trendRequestGeneration.current) setSeries(parseDiscoveryPayload(trendsResponseSchema, r).series as TrendPoint[]); })
+      .catch(() => { if (generation === trendRequestGeneration.current) setSeries([]); });
+    return () => { trendRequestGeneration.current += 1; };
   }, [locality]);
 
   return (

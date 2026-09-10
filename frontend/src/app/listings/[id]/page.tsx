@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -19,6 +19,7 @@ import { pushRecent } from "@/lib/recently-viewed";
 import { DealBadge } from "@/components/results/deal-badge";
 import { InvestmentRoiCalculator } from "@/components/investment-roi-calculator";
 import { useAuth } from "@/lib/auth-context";
+import { dealResultSchema, listingSchema, parseDiscoveryPayload, trendsResponseSchema } from "@/lib/discovery-schemas";
 
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,7 @@ export default function ListingDetail() {
   const [deal, setDeal] = useState<DealResult | null>(null);
   const [error, setError] = useState(false);
   const [message, setMessage] = useState("");
+  const requestGeneration = useRef(0);
   const { user } = useAuth();
 
   async function inquire() {
@@ -35,17 +37,24 @@ export default function ListingDetail() {
     catch (e) { toast.error(e instanceof Error ? e.message : "Could not send inquiry"); }
   }
 
-  useEffect(() => {
-    if (!id) return;
+  const loadListing = useCallback(() => {
+    const generation = ++requestGeneration.current;
+    if (!id) { setError(true); return; }
     pushRecent(id);
     api.listing(id).then((l) => {
-      const li = l as Listing;
+      if (generation !== requestGeneration.current) return;
+      const li = parseDiscoveryPayload(listingSchema, l) as Listing;
       setListing(li);
       api.trends(`?locality=${encodeURIComponent(li.locality)}&months=24`)
-        .then((r) => setTrend((r as { series: TrendPoint[] }).series)).catch(() => setTrend([]));
-      api.listingDeal(li._id).then((d) => setDeal(d as DealResult)).catch(() => setDeal(null));
-    }).catch(() => setError(true));
+        .then((r) => { if (generation === requestGeneration.current) setTrend(parseDiscoveryPayload(trendsResponseSchema, r).series as TrendPoint[]); }).catch(() => { if (generation === requestGeneration.current) setTrend([]); });
+      api.listingDeal(li._id).then((d) => { if (generation === requestGeneration.current) setDeal(parseDiscoveryPayload(dealResultSchema, d) as DealResult); }).catch(() => { if (generation === requestGeneration.current) setDeal(null); });
+    }).catch(() => { if (generation === requestGeneration.current) setError(true); });
   }, [id]);
+
+  useEffect(() => {
+    loadListing();
+    return () => { requestGeneration.current += 1; };
+  }, [loadListing]);
 
   if (error) return <div className="mx-auto max-w-4xl px-4 py-16 text-center text-muted-foreground">Listing not found.</div>;
   if (!listing) return <div className="mx-auto max-w-5xl px-4 py-10"><Skeleton className="h-96 w-full" /></div>;

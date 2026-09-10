@@ -21,6 +21,7 @@ import { ListingCard } from "@/components/listings/listing-card";
 import { EmiCalculator } from "@/components/emi-calculator";
 import { predictSchema } from "@/lib/schemas";
 import { z } from "zod";
+import { paginatedListingSchema, parseDiscoveryPayload } from "@/lib/discovery-schemas";
 
 interface Stored { input: PredictInput; result: PredictionResult; }
 
@@ -61,7 +62,7 @@ export default function ResultsPage() {
     setData(stored);
     api.featureImportance().then((f) => setFeatures(f as FeatureImportance[])).catch(() => setFeatures([]));
     api.listings(`?locality=${encodeURIComponent(stored.input.location)}&limit=3`)
-      .then((r) => setSimilar((r as Paginated<Listing>).items)).catch(() => setSimilar([]));
+      .then((r) => setSimilar((parseDiscoveryPayload(paginatedListingSchema, r) as Paginated<Listing>).items)).catch(() => setSimilar([]));
   }, [router]);
 
   if (!data) return <div className="mx-auto max-w-4xl px-4 py-12"><Skeleton className="h-64 w-full" /></div>;
