@@ -173,6 +173,7 @@ export const api = {
   featureImportance: () => apiFetch("/api/predict/feature-importance?top=10"),
   history: () => apiFetch("/api/predict/history"),
   listings: (qs: string) => apiFetch(`/api/listings${qs}`),
+  listingLocalities: () => apiFetch<{ localities: string[] }>("/api/listings/meta/localities"),
   listing: (id: string) => apiFetch(`/api/listings/${id}`),
   trends: (qs: string) => apiFetch(`/api/trends${qs}`),
   ranking: () => apiFetch("/api/trends/ranking"),

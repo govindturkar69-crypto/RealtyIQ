@@ -8,7 +8,7 @@ export interface Listing {
   propertyType: "Apartment" | "Villa" | "Plot"; areaType?: string;
   availabilityStatus: string; totalSqft: number; bhk: number; bath: number;
   balcony: number; price: number; pricePerSqft: number;
-  location?: { lat: number; lng: number }; images: string[];
+  location?: { lat: number; lng: number } | null; images: string[];
   description: string; listedDate: string;
 }
 
