@@ -19,20 +19,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { accessToken } = loadTokens();
-    if (!accessToken) { setLoading(false); return; }
+    loadTokens();
     api.me().then((r) => setUser(r.user)).catch(() => setTokens(null, null)).finally(() => setLoading(false));
   }, []);
 
   async function login(email: string, password: string) {
     const r = await api.login({ email, password });
-    setTokens(r.accessToken, r.refreshToken);
+    setTokens(r.accessToken || null, r.refreshToken || null);
     setUser(r.user);
     return r.user;
   }
   async function signup(name: string, email: string, password: string) {
     const r = await api.signup({ name, email, password });
-    setTokens(r.accessToken, r.refreshToken);
+    setTokens(r.accessToken || null, r.refreshToken || null);
     setUser(r.user);
     return r.user;
   }
