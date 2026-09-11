@@ -7,7 +7,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import { env } from "../config/env.js";
-import { getCookie, REFRESH_COOKIE, setAuthCookies, clearAuthCookies } from "../utils/authCookies.js";
+import { getCookie, REFRESH_COOKIE, CSRF_COOKIE, setAuthCookies, setCsrfCookie, clearAuthCookies } from "../utils/authCookies.js";
 import { hashToken } from "../utils/tokenHash.js";
 import { recordSecurityEvent } from "../utils/securityEvent.js";
 import { logger } from "../utils/logger.js";
@@ -50,7 +50,7 @@ export const signup = asyncHandler(async (req, res) => {
   user.refreshTokens = [];
   user.refreshTokenHashes = [hashToken(refreshToken)];
   await user.save();
-  setAuthCookies(res, { accessToken, refreshToken });
+  setAuthCookies(res, { accessToken, refreshToken }, getCookie(req, CSRF_COOKIE));
   await recordSecurityEvent(req, "signup", user, {}, {
     actorUserId: null, targetUserId: user._id, resourceType: "user", resourceId: user._id,
     action: "create", result: "success",
@@ -73,7 +73,7 @@ export const login = asyncHandler(async (req, res) => {
   user.refreshTokens = [];
   user.refreshTokenHashes = [...(user.refreshTokenHashes || []), hashToken(refreshToken)].slice(-5);
   await user.save();
-  setAuthCookies(res, { accessToken, refreshToken });
+  setAuthCookies(res, { accessToken, refreshToken }, getCookie(req, CSRF_COOKIE));
   await recordSecurityEvent(req, "login_success", user, {}, {
     actorUserId: user._id, targetUserId: user._id, resourceType: "authentication", action: "login", result: "success",
   });
@@ -115,8 +115,13 @@ export const refresh = asyncHandler(async (req, res) => {
     clearAuthCookies(res);
     throw ApiError.unauthorized("Refresh token revoked");
   }
-  setAuthCookies(res, tokens);
+  setAuthCookies(res, tokens, getCookie(req, CSRF_COOKIE));
   res.json(env.authCookieOnly ? {} : tokens);
+});
+
+export const csrf = asyncHandler(async (req, res) => {
+  const csrfToken = setCsrfCookie(res, getCookie(req, CSRF_COOKIE));
+  res.json({ csrfToken });
 });
 
 export const me = asyncHandler(async (req, res) => {

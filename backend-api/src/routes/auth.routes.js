@@ -3,11 +3,12 @@ import { validate } from "../middleware/validate.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimiters.js";
 import { signupSchema, loginSchema, refreshSchema, updateProfileSchema, changePasswordSchema, manageUserSchema } from "../validators/auth.schema.js";
-import { signup, login, refresh, me, updateProfile, changePassword, logout, deleteAccount, listUsers, manageUser } from "../controllers/auth.controller.js";
+import { csrf, signup, login, refresh, me, updateProfile, changePassword, logout, deleteAccount, listUsers, manageUser } from "../controllers/auth.controller.js";
 
 const router = Router();
 router.post("/signup", authLimiter, validate(signupSchema), signup);
 router.post("/login", authLimiter, validate(loginSchema), login);
+router.get("/csrf", csrf);
 router.post("/refresh", authLimiter, validate(refreshSchema), refresh);
 router.get("/me", authenticate, me);
 router.patch("/me", authenticate, validate(updateProfileSchema), updateProfile);

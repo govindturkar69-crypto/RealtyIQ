@@ -16,17 +16,21 @@ function makeToken(version = 0) {
   return signRefreshToken({ sub: userId, role: "user", email: "user@example.com", ver: version, jti: crypto.randomUUID() });
 }
 
-function makeRequest(token) {
-  return { body: { refreshToken: token }, id: "refresh-test", ip: "127.0.0.1", get: () => "test-agent", headers: {} };
+function makeRequest(token, cookieOnly = false) {
+  return {
+    body: cookieOnly ? {} : { refreshToken: token },
+    id: "refresh-test", ip: "127.0.0.1", get: () => "test-agent",
+    headers: cookieOnly ? { cookie: `riq_refresh=${encodeURIComponent(token)}` } : {},
+  };
 }
 
-function invoke(token) {
+function invoke(token, cookieOnly = false) {
   return new Promise((resolve) => {
     const response = {
       append() {},
       json(body) { resolve({ status: 200, body }); },
     };
-    refresh(makeRequest(token), response, (error) => resolve({ status: error?.statusCode || 500, error }));
+    refresh(makeRequest(token, cookieOnly), response, (error) => resolve({ status: error?.statusCode || 500, error }));
   });
 }
 
@@ -90,6 +94,16 @@ test("legacy plaintext refresh tokens migrate to hashes during atomic rotation",
     assert.equal(update.changes.$set.refreshTokenHashes.length, 1);
     assert.notEqual(update.changes.$set.refreshTokenHashes[0], token);
     assert.equal(update.changes.$set.refreshTokenHashes[0], hashToken(result.body.refreshToken));
+  } finally {
+    restore();
+  }
+});
+
+test("cookie-only refresh remains supported", async () => {
+  const token = makeToken();
+  const restore = installUserMocks(userFor(token), async () => ({ modifiedCount: 1 }));
+  try {
+    assert.equal((await invoke(token, true)).status, 200);
   } finally {
     restore();
   }

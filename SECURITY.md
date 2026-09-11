@@ -30,10 +30,13 @@ silently fell back to a **known dev JWT secret** when unset.
 **Fixed:**
 - Added `DELETE /api/auth/me` — removes the user and all associated data
   (predictions, saved searches), wired to a **"Delete my account"** button in the dashboard.
-**Known trade-off (documented, not silently ignored):** JWTs are stored in `localStorage`
-for simplicity, which is readable by JavaScript (XSS-exposed). For a production launch,
-move to `httpOnly`, `secure`, `sameSite` cookies. Documented here as a deliberate,
-project-scope decision.
+Browser authentication now uses HttpOnly access/refresh cookies with a CSRF double-submit
+token. Bearer headers remain supported for non-browser API clients; browser JavaScript no
+longer persists authentication tokens in localStorage.
+Because the CSRF cookie is host-only on the API domain, the approved cross-origin frontend
+obtains its value from `GET /api/auth/csrf` and keeps it in memory. Unsafe requests still
+require an `X-CSRF-Token` value matching the cookie; CORS remains restricted to the exact
+frontend origin and authentication cookies remain HttpOnly.
 
 ## 3 — Pre-Deploy Production Audit (ECC)
 **Fixed / verified:**

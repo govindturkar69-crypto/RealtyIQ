@@ -18,6 +18,12 @@ function cookieOptions(httpOnly, maxAge) {
   return { httpOnly, maxAge, secure: env.isProd, sameSite: env.isProd ? "None" : "Lax" };
 }
 
+const CSRF_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+function validCsrfToken(value) {
+  return typeof value === "string" && CSRF_TOKEN_PATTERN.test(value);
+}
+
 export function parseCookies(header = "") {
   return Object.fromEntries(header.split(";").map((part) => part.trim().split("=")).filter(([name, value]) => name && value !== undefined).map(([name, ...value]) => {
     const raw = value.join("=");
@@ -29,10 +35,16 @@ export function getCookie(req, name) {
   return parseCookies(req.headers.cookie || "")[name];
 }
 
-export function setAuthCookies(res, tokens) {
+export function setCsrfCookie(res, token) {
+  const value = validCsrfToken(token) ? token : crypto.randomBytes(32).toString("base64url");
+  res.append("Set-Cookie", serialize(CSRF_COOKIE, value, cookieOptions(false, 7 * 24 * 60 * 60 * 1000)));
+  return value;
+}
+
+export function setAuthCookies(res, tokens, csrfToken) {
   res.append("Set-Cookie", serialize(ACCESS_COOKIE, tokens.accessToken, cookieOptions(true, 15 * 60 * 1000)));
   res.append("Set-Cookie", serialize(REFRESH_COOKIE, tokens.refreshToken, cookieOptions(true, 7 * 24 * 60 * 60 * 1000)));
-  res.append("Set-Cookie", serialize(CSRF_COOKIE, crypto.randomBytes(32).toString("base64url"), cookieOptions(false, 7 * 24 * 60 * 60 * 1000)));
+  setCsrfCookie(res, csrfToken);
 }
 
 export function clearAuthCookies(res) {

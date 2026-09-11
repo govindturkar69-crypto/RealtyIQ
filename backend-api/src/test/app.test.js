@@ -32,3 +32,30 @@ test("public listing detail routes reject malformed identifiers before controlle
     await new Promise((resolve) => server.close(resolve));
   }
 });
+test("CSRF bootstrap returns a stable browser token without auth credentials", async () => {
+  const server = createApp().listen(0);
+  await new Promise((resolve) => server.once("listening", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const first = await fetch(`${base}/api/auth/csrf`);
+    assert.equal(first.status, 200);
+    const firstBody = await first.json();
+    assert.deepEqual(Object.keys(firstBody), ["csrfToken"]);
+    assert.match(firstBody.csrfToken, /^[A-Za-z0-9_-]{43}$/);
+    assert.match(first.headers.get("set-cookie") || "", /riq_csrf=/);
+    assert.doesNotMatch(JSON.stringify(firstBody), /accessToken|refreshToken|password|secret/i);
+
+    const second = await fetch(`${base}/api/auth/csrf`, { headers: { Cookie: `riq_csrf=${firstBody.csrfToken}` } });
+    assert.equal(second.status, 200);
+    assert.deepEqual(await second.json(), { csrfToken: firstBody.csrfToken });
+
+    const protectedRequest = await fetch(`${base}/api/auth/logout`, {
+      method: "POST",
+      headers: { Cookie: `riq_access=invalid; riq_csrf=${firstBody.csrfToken}`, "X-CSRF-Token": firstBody.csrfToken },
+      body: "{}",
+    });
+    assert.equal(protectedRequest.status, 401);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

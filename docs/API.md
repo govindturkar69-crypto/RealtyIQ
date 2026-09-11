@@ -27,18 +27,21 @@ The Express health endpoint does not prove MongoDB or ML readiness. Admin ML sta
 
 | Method | Path | Access | Request / behavior |
 |---|---|---|---|
-| POST | `/api/auth/signup` | Public, auth-limited | `{ name, email, password }`; creates role `user`, returns user + tokens |
-| POST | `/api/auth/login` | Public, auth-limited | `{ email, password }`; returns user + tokens |
-| POST | `/api/auth/refresh` | Public, auth-limited | `{ refreshToken }`; rotates access and refresh tokens |
+| POST | `/api/auth/signup` | Public, auth-limited | `{ name, email, password }`; establishes cookies and returns tokens only when cookie-only mode is disabled |
+| POST | `/api/auth/login` | Public, auth-limited | `{ email, password }`; establishes cookies and returns tokens only when cookie-only mode is disabled |
+| GET | `/api/auth/csrf` | Public, safe bootstrap | Returns `{ csrfToken }` and sets/preserves the non-HttpOnly `riq_csrf` double-submit cookie; the token is held in frontend memory only |
+| POST | `/api/auth/refresh` | Public, auth-limited | Optional `{ refreshToken }`; cookie or body token is atomically rotated |
 | GET | `/api/auth/me` | Authenticated | Current sanitized user |
 | PATCH | `/api/auth/me` | Authenticated | `{ name }`; updates own profile |
 | PATCH | `/api/auth/password` | Authenticated | `{ currentPassword, newPassword }`; revokes stored refresh sessions |
-| POST | `/api/auth/logout` | Authenticated | `{ refreshToken }`; removes that refresh token |
+| POST | `/api/auth/logout` | Authenticated | `{ refreshToken }`; revokes the presented token and invalidates the account's access-token version |
 | DELETE | `/api/auth/me` | Authenticated | Deletes own account and controller-associated activity |
 | GET | `/api/auth/admin/users` | Admin | Lists registered users |
 | PATCH | `/api/auth/admin/users/:id` | Admin | `{ role?, isActive? }`; guards last active admin |
 
 Passwords are minimum eight characters. Login does not disclose whether email or password was wrong. Disabled users cannot pass authenticated middleware.
+
+Cross-origin browser clients bootstrap CSRF with `GET /api/auth/csrf` using credentials, retain the returned token in memory, and send it as `X-CSRF-Token` on unsafe requests. The API requires that header to match the host-only `riq_csrf` cookie; authentication cookies remain HttpOnly.
 
 ## 4. Listings
 

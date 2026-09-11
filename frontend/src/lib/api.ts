@@ -10,6 +10,8 @@ const SENSITIVE_ERROR = /<\/?(?:html|head|body|script|style)\b|(?:https?:\/\/|fi
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
 let refreshInFlight: Promise<boolean> | null = null;
+let csrfTokenValue: string | null = null;
+let csrfInFlight: Promise<string> | null = null;
 
 export function setTokens(a: string | null, r: string | null) {
   accessToken = a; refreshToken = r;
@@ -108,26 +110,46 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
   }
 }
 
-function csrfToken() {
-  if (typeof document === "undefined") return "";
-  return document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith("riq_csrf="))?.slice(9) || "";
+function validCsrfToken(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{43}$/.test(value);
+}
+
+export function clearCsrfToken() {
+  csrfTokenValue = null;
+}
+
+async function bootstrapCsrf(): Promise<string> {
+  if (csrfTokenValue) return csrfTokenValue;
+  if (csrfInFlight) return csrfInFlight;
+  const pending = (async () => {
+    const res = await fetchWithTimeout(`${BASE}/api/auth/csrf`, { credentials: "include" });
+    const parsed = await parseResponse(res);
+    const data = isRecord(parsed.value) ? parsed.value : null;
+    if (!res.ok) throw errorFromResponse(res.status, parsed, retryAfterSeconds(res.headers.get("retry-after")));
+    if (parsed.malformed || !data || !validCsrfToken(data.csrfToken)) throw new FrontendApiError("The API returned an invalid CSRF response.", "malformed_response", res.status);
+    csrfTokenValue = data.csrfToken;
+    return data.csrfToken;
+  })();
+  csrfInFlight = pending;
+  try { return await pending; } finally { if (csrfInFlight === pending) csrfInFlight = null; }
 }
 
 async function performRefresh(): Promise<boolean> {
-  const csrf = csrfToken();
   try {
+    const csrf = await bootstrapCsrf();
     const res = await fetchWithTimeout(`${BASE}/api/auth/refresh`, {
-      method: "POST", headers: { "Content-Type": "application/json", ...(csrf ? { "X-CSRF-Token": csrf } : {}) },
+      method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
       credentials: "include", body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,
     });
-    if (!res.ok) { setTokens(null, null); return false; }
+    if (!res.ok) { setTokens(null, null); clearCsrfToken(); return false; }
     const parsed = await parseResponse(res);
-    if (parsed.malformed) { setTokens(null, null); return false; }
+    if (parsed.malformed) { setTokens(null, null); clearCsrfToken(); return false; }
     const data = isRecord(parsed.value) ? parsed.value : {};
     setTokens(typeof data.accessToken === "string" ? data.accessToken : null, typeof data.refreshToken === "string" ? data.refreshToken : null);
     return true;
   } catch {
     setTokens(null, null);
+    clearCsrfToken();
     return false;
   }
 }
@@ -146,8 +168,8 @@ export async function apiFetch<T = unknown>(path: string, options: RequestInit =
   const headers = new Headers(options.headers);
   if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-  const csrf = csrfToken();
-  if (csrf && !["GET", "HEAD", "OPTIONS"].includes((options.method || "GET").toUpperCase())) headers.set("X-CSRF-Token", csrf);
+  const method = (options.method || "GET").toUpperCase();
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) headers.set("X-CSRF-Token", await bootstrapCsrf());
   const res = await fetchWithTimeout(`${BASE}${path}`, { ...options, headers, credentials: "include" });
   if (res.status === 401 && retry && (await tryRefresh())) return apiFetch<T>(path, options, false);
   const parsed = await parseResponse(res);
@@ -164,7 +186,7 @@ export const api = {
   me: () => apiFetch<{ user: AuthResponse["user"] }>("/api/auth/me"),
   updateProfile: (name: string) => apiFetch<{ user: AuthResponse["user"] }>("/api/auth/me", { method: "PATCH", body: JSON.stringify({ name }) }),
   changePassword: (currentPassword: string, newPassword: string) => apiFetch("/api/auth/password", { method: "PATCH", body: JSON.stringify({ currentPassword, newPassword }) }),
-  logout: () => apiFetch("/api/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) }),
+  logout: () => apiFetch("/api/auth/logout", { method: "POST", body: refreshToken ? JSON.stringify({ refreshToken }) : undefined }, false).then((result) => { clearCsrfToken(); return result; }),
   deleteAccount: () => apiFetch("/api/auth/me", { method: "DELETE" }),
   users: () => apiFetch("/api/auth/admin/users"),
   manageUser: (id: string, patch: { role?: UserRole; isActive?: boolean }) =>
