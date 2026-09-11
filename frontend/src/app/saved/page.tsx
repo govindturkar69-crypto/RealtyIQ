@@ -1,36 +1,67 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Bell, Trash2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, FrontendApiError } from "@/lib/api";
 import type { SavedSearch } from "@/lib/types";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { parseDiscoveryPayload } from "@/lib/discovery-schemas";
+import { savedSearchesResponseSchema } from "@/lib/account-schemas";
 
-function filtersToQuery(f: Record<string, unknown>) {
+function savedSearchErrorMessage(error: unknown) {
+  if (!(error instanceof FrontendApiError)) return "We couldn't load your saved searches. Please try again.";
+  if (error.kind === "auth") return "Your session has expired. Please sign in again.";
+  if (error.kind === "timeout") return "Loading saved searches timed out. Please try again.";
+  if (error.kind === "network") return "Unable to reach your saved searches. Please try again.";
+  return "We couldn't load your saved searches. Please try again.";
+}
+
+function filtersToQuery(f: Record<string, unknown> | null | undefined) {
   const p = new URLSearchParams();
-  Object.entries(f).forEach(([k, v]) => v != null && p.set(k, String(v)));
+  Object.entries(f ?? {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
   return `/listings?${p.toString()}`;
 }
 
 function SavedInner() {
   const [items, setItems] = useState<SavedSearch[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
-  function load() {
-    api.savedSearches().then((r) => setItems((r as { items: SavedSearch[] }).items)).catch(() => setItems([]));
-  }
-  useEffect(load, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await api.savedSearches();
+      setItems(parseDiscoveryPayload(savedSearchesResponseSchema, r).items as SavedSearch[]);
+    } catch (e) {
+      setError(savedSearchErrorMessage(e));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
 
   async function remove(id: string) {
-    try { await api.deleteSavedSearch(id); setItems((it) => it?.filter((s) => s._id !== id) ?? null); toast.success("Removed"); }
-    catch { toast.error("Could not remove"); }
+    if (!window.confirm("Remove this saved search?")) return;
+    setPendingId(id);
+    try { await api.deleteSavedSearch(id); setItems((it) => it?.filter((s) => s._id !== id) ?? null); toast.success("Saved search removed"); }
+    catch (e) { toast.error(savedSearchErrorMessage(e).replace("load your saved searches", "remove this saved search")); }
+    finally { setPendingId(null); }
   }
   async function markSeen(id: string) {
-    try { await api.markSavedNotified(id); load(); } catch { toast.error("Failed"); }
+    setPendingId(id);
+    try {
+      await api.markSavedNotified(id);
+      setItems((current) => current?.map((item) => item._id === id ? { ...item, newMatches: 0 } : item) ?? null);
+    } catch (e) { toast.error(savedSearchErrorMessage(e).replace("load your saved searches", "mark this search as seen")); }
+    finally { setPendingId(null); }
   }
 
   return (
@@ -43,9 +74,14 @@ function SavedInner() {
         </div>
       </div>
 
-      {items === null ? (
+      {loading ? (
         <div className="space-y-3">{[0, 1].map((i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
-      ) : items.length ? (
+      ) : error ? (
+        <Card><CardContent className="flex flex-col items-center gap-3 p-10 text-center" role="alert">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button variant="outline" size="sm" onClick={() => void load()}>Try again</Button>
+        </CardContent></Card>
+      ) : items?.length ? (
         <div className="space-y-3">
           {items.map((s) => (
             <Card key={s._id}>
@@ -56,13 +92,13 @@ function SavedInner() {
                     {s.newMatches > 0 && <Badge variant="success">{s.newMatches} new</Badge>}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {s.matchCount} matches · {Object.entries(s.filters).map(([k, v]) => `${k}: ${v}`).join(" · ") || "all listings"}
+                    {s.matchCount} matches · {Object.entries(s.filters ?? {}).map(([k, v]) => `${k}: ${v}`).join(" · ") || "all listings"}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Link href={filtersToQuery(s.filters)}><Button variant="outline" size="sm">View</Button></Link>
-                  {s.newMatches > 0 && <Button variant="ghost" size="sm" onClick={() => markSeen(s._id)}>Mark seen</Button>}
-                  <Button variant="ghost" size="icon" onClick={() => remove(s._id)}><Trash2 className="h-4 w-4" /></Button>
+                  <Link href={filtersToQuery(s.filters)} className={buttonVariants({ variant: "outline", size: "sm" })}>View</Link>
+                  {s.newMatches > 0 && <Button variant="ghost" size="sm" onClick={() => void markSeen(s._id)} disabled={pendingId === s._id}>Mark seen</Button>}
+                  <Button variant="ghost" size="icon" onClick={() => void remove(s._id)} disabled={pendingId === s._id} aria-label={`Remove ${s.name}`} title="Remove saved search"><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </CardContent>
             </Card>
