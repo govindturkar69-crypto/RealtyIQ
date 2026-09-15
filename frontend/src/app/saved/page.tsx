@@ -38,7 +38,7 @@ function SavedInner() {
     setError(null);
     try {
       const r = await api.savedSearches();
-      setItems(parseDiscoveryPayload(savedSearchesResponseSchema, r).items as SavedSearch[]);
+      setItems(parseDiscoveryPayload(savedSearchesResponseSchema, r).items);
     } catch (e) {
       setError(savedSearchErrorMessage(e));
     } finally {
@@ -84,24 +84,36 @@ function SavedInner() {
       ) : items?.length ? (
         <div className="space-y-3">
           {items.map((s) => (
-            <Card key={s._id}>
-              <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
-                <div>
-                  <div className="flex items-center gap-2 font-medium">
-                    {s.name}
-                    {s.newMatches > 0 && <Badge variant="success">{s.newMatches} new</Badge>}
+            !("filters" in s) ? (
+              <Card key={s._id}>
+                <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
+                  <div>
+                    <div className="font-medium">{s.name}</div>
+                    <div className="text-xs text-muted-foreground">This saved search is no longer available. Please create it again.</div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {s.matchCount} matches · {Object.entries(s.filters ?? {}).map(([k, v]) => `${k}: ${v}`).join(" · ") || "all listings"}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link href={filtersToQuery(s.filters)} className={buttonVariants({ variant: "outline", size: "sm" })}>View</Link>
-                  {s.newMatches > 0 && <Button variant="ghost" size="sm" onClick={() => void markSeen(s._id)} disabled={pendingId === s._id}>Mark seen</Button>}
                   <Button variant="ghost" size="icon" onClick={() => void remove(s._id)} disabled={pendingId === s._id} aria-label={`Remove ${s.name}`} title="Remove saved search"><Trash2 className="h-4 w-4" /></Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card key={s._id}>
+                <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
+                  <div>
+                    <div className="flex items-center gap-2 font-medium">
+                      {s.name}
+                      {s.newMatches > 0 && <Badge variant="success">{s.newMatches} new</Badge>}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {s.matchCount} matches · {Object.entries(s.filters ?? {}).map(([k, v]) => `${k}: ${v}`).join(" · ") || "all listings"}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link href={filtersToQuery(s.filters)} className={buttonVariants({ variant: "outline", size: "sm" })}>View</Link>
+                    {s.newMatches > 0 && <Button variant="ghost" size="sm" onClick={() => void markSeen(s._id)} disabled={pendingId === s._id}>Mark seen</Button>}
+                    <Button variant="ghost" size="icon" onClick={() => void remove(s._id)} disabled={pendingId === s._id} aria-label={`Remove ${s.name}`} title="Remove saved search"><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )
           ))}
         </div>
       ) : (

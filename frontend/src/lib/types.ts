@@ -52,10 +52,18 @@ export interface MlStatus {
   n_train?: number; n_test?: number;
 }
 
-export interface SavedSearch {
-  _id: string; name: string; filters: Record<string, unknown>;
+export interface ActiveSavedSearch {
+  [key: string]: unknown;
+  _id: string; name: string; filters: Record<string, string | number | boolean>;
   matchCount: number; newMatches: number; createdAt: string;
 }
+
+export interface QuarantinedSavedSearch {
+  _id: string; name: string; status: "quarantined"; quarantineReason: "INVALID_FILTERS";
+  createdAt?: string; updatedAt?: string;
+}
+
+export type SavedSearch = ActiveSavedSearch | QuarantinedSavedSearch;
 
 export interface Inquiry {
   _id: string; message: string; status: "new" | "contacted" | "closed"; createdAt: string;

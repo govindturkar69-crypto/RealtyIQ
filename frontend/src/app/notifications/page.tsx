@@ -13,7 +13,7 @@ function NotificationsInner() {
   const [saved, setSaved] = useState<SavedSearch[] | null>(null);
   const [inquiries, setInquiries] = useState<Inquiry[] | null>(null);
   useEffect(() => {
-    api.savedSearches().then((r) => setSaved((r as { items: SavedSearch[] }).items.filter((item) => item.newMatches > 0))).catch(() => setSaved([]));
+    api.savedSearches().then((r) => setSaved((r as { items: SavedSearch[] }).items.filter((item) => "filters" in item && item.newMatches > 0))).catch(() => setSaved([]));
     api.inquiries().then((r) => setInquiries((r as { items: Inquiry[] }).items)).catch(() => setInquiries([]));
   }, []);
   const loading = saved === null || inquiries === null;

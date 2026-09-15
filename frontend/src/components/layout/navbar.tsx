@@ -32,7 +32,7 @@ export function Navbar() {
   useEffect(() => {
     if (!user || !["user", "admin"].includes(user.role)) { setAlerts(0); return; }
     const load = () => api.savedSearches()
-      .then((r) => setAlerts((r as { items: { newMatches: number }[] }).items.reduce((sum, item) => sum + item.newMatches, 0)))
+      .then((r) => setAlerts((r as { items: { newMatches: number; status?: string }[] }).items.reduce((sum, item) => item.status === "quarantined" ? sum : sum + item.newMatches, 0)))
       .catch(() => setAlerts(0));
     load();
     const timer = setInterval(load, 60000);

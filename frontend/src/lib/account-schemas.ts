@@ -10,10 +10,22 @@ const savedSearchItemSchema = z.object({
   matchCount: z.number().int().min(0),
   newMatches: z.number().int().min(0),
   createdAt: z.string(),
+  status: z.never().optional(),
 }).passthrough();
 
+const quarantinedSavedSearchItemSchema = z.object({
+  _id: objectId,
+  name: z.string(),
+  status: z.literal("quarantined"),
+  quarantineReason: z.literal("INVALID_FILTERS"),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+}).strict();
+
+const savedSearchResponseItemSchema = z.union([savedSearchItemSchema, quarantinedSavedSearchItemSchema]);
+
 export const savedSearchesResponseSchema = z.object({
-  items: z.array(savedSearchItemSchema).max(100),
+  items: z.array(savedSearchResponseItemSchema).max(100),
 }).passthrough();
 
 export const favoriteIdsResponseSchema = z.object({
