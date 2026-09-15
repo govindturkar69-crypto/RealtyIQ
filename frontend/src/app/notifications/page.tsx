@@ -3,17 +3,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { api } from "@/lib/api";
-import type { Inquiry, SavedSearch } from "@/lib/types";
+import type { ActiveSavedSearch, Inquiry, SavedSearch } from "@/lib/types";
 import { ProtectedRoute } from "@/components/protected-route";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
+function isActiveSavedSearch(item: SavedSearch): item is ActiveSavedSearch {
+  return "filters" in item;
+}
+
 function NotificationsInner() {
-  const [saved, setSaved] = useState<SavedSearch[] | null>(null);
+  const [saved, setSaved] = useState<ActiveSavedSearch[] | null>(null);
   const [inquiries, setInquiries] = useState<Inquiry[] | null>(null);
   useEffect(() => {
-    api.savedSearches().then((r) => setSaved((r as { items: SavedSearch[] }).items.filter((item) => "filters" in item && item.newMatches > 0))).catch(() => setSaved([]));
+    api.savedSearches().then((r) => setSaved((r as { items: SavedSearch[] }).items.filter((item): item is ActiveSavedSearch => isActiveSavedSearch(item) && item.newMatches > 0))).catch(() => setSaved([]));
     api.inquiries().then((r) => setInquiries((r as { items: Inquiry[] }).items)).catch(() => setInquiries([]));
   }, []);
   const loading = saved === null || inquiries === null;
