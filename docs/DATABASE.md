@@ -126,7 +126,7 @@ The credentials are demo-only and must be replaced/removed in a real deployment.
 - Self-service account deletion removes that user's predictions, saved searches, and inquiries, but can leave optional listing `createdBy` references.
 - Seed can leave predictions/saved searches/inquiries pointing to deleted users/listings.
 - No unique saved-search name, duplicate inquiry prevention, soft-delete, audit trail, retention TTL, or optimistic concurrency contract exists.
-- No transaction protects multi-document auth/account/admin operations.
+- Self-service account deletion uses one MongoDB transaction for the user's predictions, saved searches, inquiries, and User document; transaction failures fail closed. Other multi-document auth/account/admin operations remain non-transactional.
 
 ## 7. Backup, restore, migration, and privacy
 

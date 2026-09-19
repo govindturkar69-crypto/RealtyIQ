@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { User } from "../models/User.js";
 import { randomUUID } from "node:crypto";
 import { Prediction } from "../models/Prediction.js";
@@ -191,15 +192,30 @@ export const logout = asyncHandler(async (req, res) => {
 
 export const deleteAccount = asyncHandler(async (req, res) => {
   const userId = req.user.sub;
-  const user = await User.findById(userId).select("role isActive");
-  if (user?.role === "admin" && user.isActive !== false && await User.countDocuments({ role: "admin", isActive: { $ne: false } }) <= 1) {
-    throw ApiError.badRequest("The last active admin cannot be deleted");
+  let session;
+  try {
+    session = await mongoose.startSession();
+    await session.withTransaction(async () => {
+      const user = await User.findById(userId).select("role isActive").session(session).lean();
+      let adminAnchor;
+      if (user?.role === "admin" && user.isActive !== false) {
+        const activeAdmins = await User.find({ role: "admin", isActive: { $ne: false } })
+          .sort({ _id: 1 }).select("_id").session(session).lean();
+        if (activeAdmins.length <= 1) throw ApiError.badRequest("The last active admin cannot be deleted");
+        adminAnchor = activeAdmins[0]?._id;
+      }
+      await Prediction.deleteMany({ user: userId }).session(session);
+      await SavedSearch.deleteMany({ user: userId }).session(session);
+      await Inquiry.deleteMany({ user: userId }).session(session);
+      if (adminAnchor) await User.updateOne({ _id: adminAnchor }, { $inc: { adminMutationVersion: 1 } }).session(session);
+      await User.findByIdAndDelete(userId).session(session);
+    });
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(503, "Account deletion temporarily unavailable");
+  } finally {
+    if (session) await session.endSession();
   }
-  await Promise.all([
-    Prediction.deleteMany({ user: userId }),
-    SavedSearch.deleteMany({ user: userId }),
-    Inquiry.deleteMany({ user: userId }),
-    User.findByIdAndDelete(userId),
-  ]);
+  clearAuthCookies(res);
   res.json({ success: true, message: "Account and all associated data have been deleted" });
 });
