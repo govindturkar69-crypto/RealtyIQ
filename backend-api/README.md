@@ -42,14 +42,17 @@ backend-api/src/
 ## Run locally
 ```bash
 cp .env.example .env         # set MONGODB_URI, JWT secrets, ML_SERVICE_URL
+# Set REALTYIQ_DISPOSABLE_DB=true and
+# REALTYIQ_DISPOSABLE_DB_CONFIRM=DISPOSABLE_REALTYIQ_DATABASE first.
 npm install
-npm run seed                 # loads ~600 listings + admin/demo users from cleaned CSV
+npm run seed                 # local/allowlisted disposable DB only
+npm run bootstrap-admin      # controlled local admin bootstrap only
 npm start                    # http://localhost:8000
 npm test                     # runs lib unit tests (no DB needed)
 ```
 Or `docker compose up` from the repo root (Mongo + ML + API).
 
-Seed logins: `admin@realtyiq.dev / Admin@12345`, `demo@realtyiq.dev / Demo@12345`.
+Set `BOOTSTRAP_ADMIN_EMAIL` and a unique `BOOTSTRAP_ADMIN_PASSWORD` (16+ characters) before `npm run bootstrap-admin` or `npm run seed`. Set an explicit local/disposable `MONGODB_URI`; production/Atlas targets are rejected. The optional demo account requires `SEED_DEMO_EMAIL` and `SEED_DEMO_PASSWORD`; no credentials are published here.
 
 ## Notes on realness
 - **Trends over time:** the Bengaluru dataset has no timestamps, so the seed assigns

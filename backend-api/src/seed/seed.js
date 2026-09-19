@@ -6,6 +6,8 @@ import { connectDB, disconnectDB } from "../config/db.js";
 import { User } from "../models/User.js";
 import { Listing } from "../models/Listing.js";
 import { logger } from "../utils/logger.js";
+import { bootstrapAdminCredentials } from "../utils/bootstrapAdmin.js";
+import { assertSafeCliTarget } from "../utils/cliDbGuard.js";
 import { geoFor } from "./geo.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -48,19 +50,29 @@ function spreadDate(i, total) {
 }
 
 async function run() {
+  const adminCredentials = bootstrapAdminCredentials();
+  const demoPassword = process.env.SEED_DEMO_PASSWORD;
+  const demoEmail = process.env.SEED_DEMO_EMAIL?.trim().toLowerCase();
+  if (Boolean(demoPassword) !== Boolean(demoEmail)) throw new Error("SEED_DEMO_EMAIL and SEED_DEMO_PASSWORD must be provided together");
+  if (demoPassword && demoPassword.length < 16) throw new Error("SEED_DEMO_PASSWORD must be at least 16 characters");
   if (!fs.existsSync(CSV_PATH)) throw new Error(`Seed CSV not found: ${CSV_PATH}`);
   const rows = parse(fs.readFileSync(CSV_PATH), { columns: true, skip_empty_lines: true });
   const sample = rows.slice(0, MAX_LISTINGS);
 
-  await connectDB();
+  const mongoUri = assertSafeCliTarget({ operation: "seed" });
+  await connectDB(mongoUri);
   await Promise.all([User.deleteMany({}), Listing.deleteMany({})]);
 
-  const admin = new User({ name: "Admin", email: "admin@realtyiq.dev", role: "admin" });
-  await admin.setPassword("Admin@12345");
-  const demo = new User({ name: "Demo User", email: "demo@realtyiq.dev", role: "user" });
-  await demo.setPassword("Demo@12345");
+  const admin = new User({ name: "Admin", email: adminCredentials.email, role: "admin" });
+  await admin.setPassword(adminCredentials.password);
   await admin.save();
-  await demo.save();
+  let usersSeeded = 1;
+  if (demoPassword) {
+    const demo = new User({ name: "Demo User", email: demoEmail, role: "user" });
+    await demo.setPassword(demoPassword);
+    await demo.save();
+    usersSeeded += 1;
+  }
 
   const docs = sample.map((r, i) => {
     const price = Math.round(Number(r.price));
@@ -87,8 +99,8 @@ async function run() {
     };
   });
   await Listing.insertMany(docs);
-  logger.info(`Seeded ${docs.length} listings, 2 users (admin@realtyiq.dev / demo@realtyiq.dev).`);
+  logger.info("seed_completed", { listings: docs.length, users: usersSeeded });
   await disconnectDB();
 }
 
-run().catch((e) => { logger.error("Seed failed:", e.message); process.exit(1); });
+run().catch((e) => { logger.error("seed_failed", { errorType: e?.name || "Error" }); process.exit(1); });

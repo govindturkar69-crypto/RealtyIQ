@@ -32,7 +32,11 @@ npm run dev
 ```
 Open http://localhost:3000. Seed the database once (in another terminal):
 ```bash
-docker compose exec backend-api npm run seed
+docker compose exec -e NODE_ENV=development \
+  -e REALTYIQ_DISPOSABLE_DB=true \
+  -e REALTYIQ_DISPOSABLE_DB_CONFIRM=DISPOSABLE_REALTYIQ_DATABASE \
+  -e BOOTSTRAP_ADMIN_EMAIL=admin@example.com \
+  -e BOOTSTRAP_ADMIN_PASSWORD='<unique 16+ character password>' backend-api npm run seed
 ```
 
 > Docker build files are named `Dockerfile.txt`; compose already references them.
@@ -83,7 +87,7 @@ cd backend-api
 cp .env.example .env
 # edit .env: set MONGODB_URI, JWT secrets, ML_SERVICE_URL=http://localhost:8001
 npm install
-npm run seed        # loads ~600 listings + admin/demo users
+npm run seed        # disposable DB only; requires target markers + BOOTSTRAP_ADMIN_*
 npm start
 ```
 Expected:
@@ -93,7 +97,7 @@ Expected:
 ```
 Seed output:
 ```
-Seeded 600 listings, 2 users (admin@realtyiq.dev / demo@realtyiq.dev).
+Seeded listings and the operator-supplied admin (plus an optional demo account).
 ```
 Verify:
 ```bash
@@ -104,7 +108,7 @@ curl "http://localhost:8000/api/listings?limit=2"
 # {"items":[...2 listings...],"page":1,"limit":2,"total":600,"totalPages":300}
 
 curl -X POST http://localhost:8000/api/auth/login -H "Content-Type: application/json" \
-  -d '{"email":"demo@realtyiq.dev","password":"Demo@12345"}'
+  -d '{"email":"your-user@example.com","password":"your-password"}'
 # {"user":{...},"accessToken":"eyJ...","refreshToken":"eyJ..."}
 
 curl "http://localhost:8000/api/trends/ranking"
@@ -121,7 +125,7 @@ npm run dev
 Open http://localhost:3000 and click through:
 - **/** landing → **/predict** (fill the 3-step form) → **/results** (price + confidence bar + feature chart)
 - **/listings** (filter/sort/paginate) → click a card → **/listings/[id]** (specs + trend chart)
-- **/signup** or **/login** (demo@realtyiq.dev / Demo@12345) → **/dashboard** (prediction history)
+- **/signup** or **/login** (with a locally created account) → **/dashboard** (prediction history)
 
 ---
 
@@ -149,10 +153,9 @@ npm install && npm run build         # should complete with no type errors
 ---
 
 ## Seed credentials
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@realtyiq.dev | Admin@12345 |
-| User  | demo@realtyiq.dev  | Demo@12345 |
+Credentials are never published. Supply `BOOTSTRAP_ADMIN_EMAIL` and
+`BOOTSTRAP_ADMIN_PASSWORD` at runtime; optional demo credentials use
+`SEED_DEMO_EMAIL` and `SEED_DEMO_PASSWORD`.
 
 ---
 

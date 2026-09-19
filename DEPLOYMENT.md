@@ -63,8 +63,12 @@ repo — they're gitignored.
    | `JWT_ACCESS_SECRET` | a long random string |
    | `JWT_REFRESH_SECRET` | a different long random string |
 4. Create and wait for `MongoDB connected` in the logs. Test `https://realtyiq-api.onrender.com/health`.
-5. **Seed the cloud database once:** Render dashboard → the API service → **Shell** →
-   run `npm run seed`. (Or temporarily run it locally with the Atlas `MONGODB_URI`.)
+5. **Do not run seed or CLI account scripts against this Render/Atlas service.**
+   `npm run seed`, `npm run bootstrap-admin`, `seed-users.js`, and `set-password.js`
+   fail closed for production-capable targets. Production administrator provisioning,
+   if required, is a separately approved break-glass operation; it is not a generic
+   deployment step. Use the CLI only with an explicitly allowlisted disposable target
+   and the required runtime credentials/confirmation markers.
 
 > Tip: `render.yaml` at the repo root can create both Render services automatically via
 > **New → Blueprint** instead of doing steps 2–3 by hand.
@@ -85,7 +89,7 @@ repo — they're gitignored.
 1. Copy your Vercel URL.
 2. Back in Render → realtyiq-api → set `CORS_ORIGIN` to that Vercel URL → **Manual Deploy / Save**
    (so the browser is allowed to call the API).
-3. Open your Vercel URL → sign up / log in (`demo@realtyiq.dev` / `Demo@12345`) → make a prediction.
+3. Open your Vercel URL → sign up or log in with an account you created → make a prediction.
 
 ---
 

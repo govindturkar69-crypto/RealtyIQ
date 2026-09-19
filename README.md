@@ -38,7 +38,8 @@
 | 🧠 **ML Service** | [realtyiq-ml.onrender.com](https://realtyiq-ml.onrender.com) | FastAPI · Render |
 | 🗄️ **Database** | MongoDB Atlas | Cloud |
 
-> **Demo login** — `demo@realtyiq.dev` / `Demo@12345`
+> Create an account locally, or use the controlled admin bootstrap command described in
+> [DEPLOYMENT.md](DEPLOYMENT.md). No default credentials are shipped.
 >
 > ⏳ Free-tier services sleep after ~15 min idle; the first request may take ~30s to wake.
 
@@ -162,8 +163,9 @@ cd ml-service && pip install -r requirements.txt
 python src/train.py --dataset bengaluru
 python -m uvicorn app.main:app --app-dir app --port 8001
 
-# 2. Backend API   (needs MongoDB running / Atlas URI in .env)
-cd backend-api && npm install && npm run seed && npm start
+# 2. Backend API   (needs an explicitly disposable local MongoDB target)
+cd backend-api && cp .env.example .env   # set runtime credentials and disposable-target markers
+npm install && npm run seed && npm start
 
 # 3. Frontend
 cd frontend && npm install && npm run dev   # http://localhost:3000
