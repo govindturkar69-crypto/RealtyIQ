@@ -45,6 +45,7 @@ export const env = {
     refreshTtl: process.env.JWT_REFRESH_TTL || "7d",
   },
   mlServiceUrl: process.env.ML_SERVICE_URL || "http://localhost:8001",
+  mlServiceToken: isProd ? required("ML_SERVICE_TOKEN", { secret: true }) : (process.env.ML_SERVICE_TOKEN?.trim() || ""),
   rateLimit: {
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000),
     max: Number(process.env.RATE_LIMIT_MAX || 200),

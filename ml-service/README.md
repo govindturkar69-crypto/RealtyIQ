@@ -43,14 +43,14 @@ Switch datasets with `--dataset synthetic` (run `python data/generate_dataset.py
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET  | `/health` | liveness + model-loaded flag |
-| GET  | `/localities` | dropdown data: categorical options + numeric ranges |
-| GET  | `/model-info` | selected model + test metrics |
-| GET  | `/feature-importance?top=15` | why a price is predicted |
-| POST | `/predict` | predicted price + 95% confidence range + ₹/sqft |
+| GET  | `/localities` | dropdown data; bearer service authentication required |
+| GET  | `/model-info` | selected model + test metrics; bearer service authentication required |
+| GET  | `/feature-importance?top=15` | why a price is predicted; bearer service authentication required |
+| POST | `/predict` | predicted price + 95% confidence range + ₹/sqft; bearer service authentication required |
 
 ### Example
 ```bash
-curl -X POST localhost:8001/predict -H "Content-Type: application/json" -d '{
+curl -X POST localhost:8001/predict -H "Content-Type: application/json" -H "Authorization: Bearer $ML_SERVICE_TOKEN" -d '{
   "location":"Whitefield","area_type":"Super built-up Area",
   "availability_status":"Ready To Move","total_sqft":1200,"bhk":2,"bath":2,"balcony":1 }'
 ```

@@ -11,6 +11,12 @@ services:
     envVars:
       - key: DATASET
         value: bengaluru
+      - key: NODE_ENV
+        value: production
+      - key: ML_SERVICE_TOKEN
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
 
   - type: web
     name: realtyiq-api
@@ -26,6 +32,8 @@ services:
       - key: MONGODB_URI
         sync: false
       - key: ML_SERVICE_URL
+        sync: false
+      - key: ML_SERVICE_TOKEN
         sync: false
       - key: CORS_ORIGIN
         sync: false

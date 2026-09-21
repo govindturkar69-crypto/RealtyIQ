@@ -41,7 +41,7 @@ backend-api/src/
 
 ## Run locally
 ```bash
-cp .env.example .env         # set MONGODB_URI, JWT secrets, ML_SERVICE_URL
+cp .env.example .env         # set MONGODB_URI, JWT secrets, ML_SERVICE_URL, ML_SERVICE_TOKEN
 # Set REALTYIQ_DISPOSABLE_DB=true and
 # REALTYIQ_DISPOSABLE_DB_CONFIRM=DISPOSABLE_REALTYIQ_DATABASE first.
 npm install

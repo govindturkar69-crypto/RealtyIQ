@@ -50,10 +50,11 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for flows and [API.md](API.md) for contra
 | API | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Development fallbacks; strong distinct values required in production |
 | API | `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL` | `15m`, `7d` |
 | API | `ML_SERVICE_URL` | `http://localhost:8001` |
+| API/ML | `ML_SERVICE_TOKEN` | Shared service credential for protected ML calls; required in production and supplied explicitly for local protected calls |
 | API | rate-limit variables | API: 15 min/200; auth: 1 min/5 |
 | ML | `PORT` | Container/start convention `8001` |
 | ML | `DATASET` | `bengaluru` |
-| ML | `ALLOWED_ORIGINS` | `*` unless configured |
+| ML | `ALLOWED_ORIGINS` | Explicit comma-separated HTTP(S) origins; production required |
 
 Secrets must never be committed. `.env.example` files document names only.
 
@@ -84,7 +85,7 @@ Secrets must never be committed. `.env.example` files document names only.
 - Rate-limit API traffic and use the stricter limiter for login/signup/refresh.
 - Keep admin authorization server-side and protect the last active admin.
 - Escape user search text before constructing MongoDB regular expressions.
-- Restrict production CORS to the configured web origin and use long random JWT secrets.
+- Restrict production CORS to the configured web origin and use long random JWT secrets; configure the shared ML service token.
 - Do not log tokens, passwords, connection strings, or inquiry personal data unnecessarily.
 
 Current limitations: browser tokens live in `localStorage` (XSS exposure), no CSRF model is needed for bearer headers but XSS prevention is critical, no audit log exists, and no documented automated backup/restore or retention policy exists.
@@ -121,4 +122,4 @@ Current limitations: browser tokens live in `localStorage` (XSS exposure), no CS
 - No telemetry, tracing backend, audit events, alerting, backup test, or capacity target is defined.
 - Agent and broker values remain assignable but currently have no protected panel; define their permissions before enabling either role.
 - Checked-in ML metadata is explicitly a numpy sandbox reference; README model tables describe another training result. A reproducible authoritative model artifact/evaluation run must be selected.
-- `ALLOWED_ORIGINS=*` is the ML default, although the ML service is normally private behind Express.
+- ML CORS uses an explicit origin allowlist; production rejects missing, empty, or wildcard origins.

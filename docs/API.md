@@ -3,7 +3,8 @@
 ## 1. Conventions
 
 - Express base URL: `http://localhost:8000`; application routes use `/api`.
-- ML base URL: `http://localhost:8001`; normally called only by Express.
+- ML base URL: `http://localhost:8001`; normally called only by Express and protected by
+  the shared `ML_SERVICE_TOKEN`.
 - Protected Express endpoints require `Authorization: Bearer <accessToken>`.
 - Roles: `user`, `agent`, `broker`, `admin`; “admin” below means admin-only middleware.
 - Express success responses are JSON unless a delete returns a simple message. Errors use:
@@ -19,7 +20,9 @@
 | Method | Path | Access | Result |
 |---|---|---|---|
 | GET | `/health` | Public | API status and timestamp |
-| GET | ML `/health` | Internal/public by deployment | `{ status, model_loaded, model_name }` |
+| GET | ML `/health` | Public health probe | `{ status, model_loaded, model_name }` |
+| GET | ML `/localities`, `/model-info`, `/feature-importance` | Service token | ML metadata |
+| POST | ML `/predict` | Service token | Prediction result |
 
 The Express health endpoint does not prove MongoDB or ML readiness. Admin ML status calls the ML health/info endpoints.
 
@@ -145,10 +148,10 @@ Stored filters correspond to supported listing query fields. Alerts are computed
 | Method | Path | Request / result |
 |---|---|---|
 | GET | `/health` | Runtime health and loaded-model state |
-| GET | `/localities` | Categorical enums and numeric ranges from metadata |
-| GET | `/model-info` | Model metadata and evaluation information |
-| GET | `/feature-importance?top=15` | Ranked importance list |
-| POST | `/predict` | Pydantic-validated prediction input/output described above |
+| GET | `/localities` | Service-token protected metadata |
+| GET | `/model-info` | Service-token protected model metadata |
+| GET | `/feature-importance?top=15` | Service-token protected ranked importance list |
+| POST | `/predict` | Service-token protected, Pydantic-validated prediction |
 
 Model input bounds: `total_sqft` greater than 100 and less than 50,000; BHK/bath 1–20; balcony 0–10; area type and availability must be allowed values. Location validity is resolved by predictor metadata/model behavior.
 
@@ -158,6 +161,8 @@ Model input bounds: `total_sqft` greater than 100 and less than 50,000; BHK/bath
 - General API limiter: configured default 200 requests/15 minutes; auth default 5/minute.
 - ML prediction timeout: 8 s; options/importances: 5 s; health/info: 3 s.
 - FastAPI 422 is adapted to an API 400; unreachable service to 502; timeout to 504.
+- ML upstream exception details are not forwarded to API clients; production responses use
+  generic failure messages.
 - Invalid ObjectIds, missing resources, owner mismatch, inactive account, and role mismatch are rejected by their route/controller middleware paths.
 
 The Express API has no OpenAPI document, version prefix, idempotency keys, cache contract, or deprecation policy. Treat this file and validators/routes as the current manual contract.

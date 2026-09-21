@@ -37,11 +37,19 @@ repo — they're gitignored.
    - **Runtime:** Docker
    - **Dockerfile Path:** `ml-service/Dockerfile.txt`
    - **Instance Type:** Free
-   - **Environment variable:** `DATASET = bengaluru`
+   - **Environment variables:** `NODE_ENV=production`, `DATASET=bengaluru`, an explicit
+     `ALLOWED_ORIGINS` allowlist, and a unique `ML_SERVICE_TOKEN` (at least 32 random characters).
 4. Create. First build takes ~5–10 min (it installs deps and **trains the model**).
-5. When live, copy its URL, e.g. `https://realtyiq-ml.onrender.com`. Test `/health` in the browser.
+5. When live, copy its URL, e.g. `https://realtyiq-ml.onrender.com`, for the API's
+   `ML_SERVICE_URL`. `/health` is the only intentionally public probe; all other ML
+   endpoints require `ML_SERVICE_TOKEN`.
 
 > Free Render services sleep after ~15 min idle and take ~30s to wake — normal for a demo.
+
+> Provider action: this repository cannot guarantee Render private networking. Prefer a
+> Render private service/internal URL for ML where your plan supports it; otherwise keep
+> the web service reachable only with the shared service token and do not expose that token
+> to the browser.
 
 ---
 
@@ -62,6 +70,7 @@ repo — they're gitignored.
    | `CORS_ORIGIN` | your Vercel URL (fill after step 5, then redeploy) |
    | `JWT_ACCESS_SECRET` | a long random string |
    | `JWT_REFRESH_SECRET` | a different long random string |
+   | `ML_SERVICE_TOKEN` | the same unique service token configured on the ML service |
 4. Create and wait for `MongoDB connected` in the logs. Test `https://realtyiq-api.onrender.com/health`.
 5. **Do not run seed or CLI account scripts against this Render/Atlas service.**
    `npm run seed`, `npm run bootstrap-admin`, `seed-users.js`, and `set-password.js`
@@ -99,6 +108,8 @@ repo — they're gitignored.
 - [ ] A prediction returns a price (frontend → API → ML all wired).
 - [ ] `NODE_ENV=production` set (enables fail-fast secret checks + generic errors).
 - [ ] JWT secrets are strong and **not** the dev defaults.
+- [ ] `ML_SERVICE_TOKEN` is set to the same strong value on API and ML, and the ML URL is
+      not publicly reachable (or is protected by the service token).
 - [ ] Atlas password rotated if it was ever shared.
 
 ## Notes
