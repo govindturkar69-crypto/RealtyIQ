@@ -1,7 +1,7 @@
 "use client";
 import type { AuthResponse, UserRole } from "./types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = "";
 // Covers the API's bounded ML call (up to 8s) plus normal browser/network overhead.
 export const API_REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RETRY_AFTER_SECONDS = 300;
