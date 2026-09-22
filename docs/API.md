@@ -166,3 +166,29 @@ Model input bounds: `total_sqft` greater than 100 and less than 50,000; BHK/bath
 - Invalid ObjectIds, missing resources, owner mismatch, inactive account, and role mismatch are rejected by their route/controller middleware paths.
 
 The Express API has no OpenAPI document, version prefix, idempotency keys, cache contract, or deprecation policy. Treat this file and validators/routes as the current manual contract.
+
+## 12. Browser API boundary and proxy contract
+
+Browser requests use one canonical boundary:
+
+```text
+Browser → same-origin /api/* → Next.js frontend-origin proxy → Express API
+```
+
+The browser uses relative `/api/*` paths. The direct Render API is not part of the canonical browser contract. The proxy route is `/api/[...path]` and reads the fixed, server-only `PROXY_UPSTREAM_API_ORIGIN`; it never selects an upstream from request input.
+
+The proxy preserves the request method, body, path, and query string. It forwards only application headers needed by the API, including `Content-Type`, `Cookie`, `X-CSRF-Token`, an approved `Authorization` header when supplied, and a bounded `X-Request-ID`. Host, connection, transfer, upgrade, proxy-authentication, forwarding, and upstream-selection headers are blocked. Requests have a 15-second timeout, no automatic retries for authenticated state-changing operations, and controlled `502`/`504` failures. Proxied responses use `Cache-Control: private, no-store`; safe status/content headers and each `Set-Cookie` value are preserved. JWTs are never placed in localStorage, sessionStorage, query parameters, or response bodies.
+
+Authentication cookies are `riq_access`, `riq_refresh`, and `riq_csrf`. Access and refresh cookies remain HttpOnly, Secure in production, use the configured SameSite policy, and remain host-only when no Domain attribute is emitted. The proxy preserves Path, Secure, HttpOnly, SameSite, Max-Age, and Expires attributes and removes an upstream Domain attribute if one is present. Unsafe browser requests send `X-CSRF-Token`, which must match the `riq_csrf` cookie.
+
+## 13. Liveness and readiness
+
+`GET /health` is public process liveness. It returns `200` with the shape below; `ts` is the current numeric timestamp (shown as `0` only as an example):
+
+```json
+{ "status": "ok", "service": "backend-api", "ts": 0 }
+```
+
+It performs no database query and no ML request.
+
+`GET /ready` returns `200` and `{ "status": "ready" }` when `mongoose.connection.readyState === 1`. Any other Mongoose state returns `503` and `{ "status": "not_ready" }`. It reads local driver state only: it does not execute a database query or call ML, so it proves driver connection state rather than successful query execution.

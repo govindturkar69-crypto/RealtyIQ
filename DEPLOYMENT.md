@@ -89,7 +89,7 @@ repo — they're gitignored.
 2. Settings:
    - **Root Directory:** `frontend`
    - Framework: Next.js (auto-detected)
-3. **Environment Variable:** `NEXT_PUBLIC_API_URL = https://realtyiq-api.onrender.com`
+3. **Environment Variable:** `PROXY_UPSTREAM_API_ORIGIN` set server-side to the fixed Express API origin; never use a `NEXT_PUBLIC_*` variable for the proxy destination.
 4. Deploy. You'll get a URL like `https://realtyiq.vercel.app`.
 
 ---
@@ -115,3 +115,15 @@ repo — they're gitignored.
 ## Notes
 - Free tiers sleep when idle; the first request after a nap is slow. Fine for a demo/portfolio.
 - For a custom domain, add it in Vercel and update `CORS_ORIGIN` on Render to match.
+
+## Canonical browser and readiness contract
+
+Browser traffic uses `Frontend origin → /api/* → Next.js proxy → Express API`. The proxy destination is the server-only `PROXY_UPSTREAM_API_ORIGIN`; do not configure a browser-side `NEXT_PUBLIC_API_URL` for this contract and do not allow request input to select an upstream.
+
+Render health checks are:
+
+- API: `/ready` — MongoDB Mongoose driver readiness (`200 ready`, `503 not_ready`); no query or ML request is issued.
+- API liveness: `/health` — Express process liveness only.
+- ML: `/health` — FastAPI process/model liveness; protected ML routes still require `ML_SERVICE_TOKEN`.
+
+The proxy, readiness contract, and local verification are implemented. Production runtime, provider revisions/configuration, Playwright, CI, and production ML artifact identity remain unverified.

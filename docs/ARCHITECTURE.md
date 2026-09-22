@@ -164,3 +164,29 @@ Local `docker-compose.yml` starts MongoDB, ML, and API on ports 27017, 8001, and
 ## 10. Evolution triggers
 
 Add a migration framework before incompatible schema changes; a job/queue service before real notification delivery; geocoding/spatial indexes before address-accurate maps; audit/event storage before regulated admin operations; and a shared schema/OpenAPI generator when manual API contract drift becomes recurring.
+
+## 11. Browser proxy and trust boundaries
+
+```text
+Browser
+  ↓ same-origin /api/*
+Next.js frontend-origin proxy
+  ↓ fixed server-side upstream
+Express API
+  ├── authentication
+  ├── authorization/RBAC
+  ├── CSRF
+  ├── MongoDB Atlas
+  └── authenticated ML client ── ML_SERVICE_TOKEN ──> FastAPI ML
+```
+
+The browser does not directly call the Render API under the canonical contract. Express remains authoritative for authentication, authorization, and CSRF. The ML service is a service-to-service trust boundary authenticated by `ML_SERVICE_TOKEN`; that token and browser JWTs are never exposed to browser JavaScript.
+
+The boundaries are:
+
+- Browser → Next.js proxy: same-origin request handling, cookie forwarding, CSRF header forwarding, bounded request IDs, and no arbitrary upstream selection.
+- Next.js proxy → Express: fixed server-side origin, filtered headers, bounded timeout, controlled errors, and private/no-store responses.
+- Express → MongoDB: server-side credentials and Mongoose persistence/authorization boundary.
+- Express → ML: authenticated service-to-service requests with validated upstream responses.
+- Logs/metrics → observability: request IDs and sanitized fields only; no tokens, cookies, credentials, or raw upstream exceptions.
+- Deployment/provider boundary: Vercel, Render, and Atlas configuration remains outside browser control and requires independent provider verification.

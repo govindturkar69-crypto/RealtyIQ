@@ -173,3 +173,27 @@ Add the smallest useful checks in this order:
 - `git diff --check` is clean and `git status --short` contains only intended files.
 - Contract/schema/role/model behavior changes update the corresponding canonical documentation.
 - Known failures are reported explicitly; never describe an unexecuted test as passing.
+
+## 9. Proxy and readiness verification
+
+The Commit 1 proxy checks cover same-origin `/api/*` path mapping, exact query preservation, HTTP method/body preservation, application-header filtering, Cookie and CSRF-header forwarding, bounded request-ID validation, timeout-to-`504`, upstream-failure-to-`502`, individual `Set-Cookie` preservation, relative-redirect safety, private/no-store caching, and absence of token exposure.
+
+The Commit 2 readiness checks cover:
+
+- connected → `200 { "status": "ready" }`
+- connecting → `503 { "status": "not_ready" }`
+- disconnecting → `503 { "status": "not_ready" }`
+- disconnected → `503 { "status": "not_ready" }`
+- uninitialized → `503 { "status": "not_ready" }`
+
+Verified local commands and results:
+
+```text
+frontend: npm run lint                 PASS
+frontend: npx tsc --noEmit             PASS
+frontend: npm run build                PASS
+backend-api: node --test src/test/app.test.js   5 passed
+backend-api: npm test                  106 passed
+```
+
+Playwright, CI, provider verification, production runtime, and production browser E2E have not been run or claimed here.
