@@ -32,8 +32,11 @@ function splitSetCookie(value: string): string[] {
   return value.split(/,(?=\s*[^;,=\s]+=[^;,]*)/g).map((cookie) => cookie.trim()).filter(Boolean);
 }
 
-function browserCookie(value: string): string {
-  return value.split(";").filter((part) => !/^\s*domain=/i.test(part)).join(";");
+function browserCookie(value: string): string | null {
+  const parts = value.split(";").map((part) => part.trim()).filter(Boolean);
+  if (!parts[0] || !/^[^=;\s]+=[^;]*$/.test(parts[0])) return null;
+  const attributes = parts.slice(1).filter((part) => /^(?:path=[^;]*|secure|httponly|samesite=(?:lax|strict|none)|max-age=-?\d+|expires=[^;]+)$/i.test(part));
+  return [parts[0], ...attributes].join("; ");
 }
 
 function proxyPath(request: NextRequest, origin: URL): URL {
@@ -51,8 +54,16 @@ function requestHeaders(request: NextRequest, requestId: string): Headers {
   return headers;
 }
 
-function errorResponse(status: number, error: string, requestId: string): NextResponse {
-  return NextResponse.json({ error, requestId }, { status, headers: { "Cache-Control": "private, no-store", "X-Request-Id": requestId } });
+function errorResponse(status: number, error: string, requestId: string, setCookies: string[] = []): NextResponse {
+  const headers = new Headers({ "Cache-Control": "private, no-store", "X-Request-Id": requestId });
+  for (const cookie of setCookies) headers.append("Set-Cookie", cookie);
+  return NextResponse.json({ error, requestId }, { status, headers });
+}
+
+function safeSetCookies(headers: Headers): string[] {
+  const values = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.()
+    || splitSetCookie(headers.get("set-cookie") || "");
+  return values.map(browserCookie).filter((cookie): cookie is string => Boolean(cookie));
 }
 
 function safeUpstreamError(status: number, body: Uint8Array, contentType: string): string {
@@ -91,6 +102,7 @@ async function handler(request: NextRequest): Promise<Response> {
       signal: controller.signal,
     });
 
+    const setCookieHeaders = safeSetCookies(upstream.headers);
     const responseHeaders = new Headers({ "Cache-Control": "private, no-store", "X-Request-Id": requestId });
     for (const name of SAFE_RESPONSE_HEADERS) {
       const value = upstream.headers.get(name);
@@ -103,15 +115,13 @@ async function handler(request: NextRequest): Promise<Response> {
       try {
         JSON.parse(new TextDecoder().decode(bodyBytes));
       } catch {
-        return errorResponse(502, "API returned an invalid response", requestId);
+        return errorResponse(502, "API returned an invalid response", requestId, setCookieHeaders);
       }
     }
 
-    if (upstream.status >= 400) return errorResponse(upstream.status, safeUpstreamError(upstream.status, bodyBytes, contentType), requestId);
+    if (upstream.status >= 400) return errorResponse(upstream.status, safeUpstreamError(upstream.status, bodyBytes, contentType), requestId, setCookieHeaders);
 
-    const setCookieHeaders = (upstream.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.()
-      || splitSetCookie(upstream.headers.get("set-cookie") || "");
-    for (const cookie of setCookieHeaders) responseHeaders.append("Set-Cookie", browserCookie(cookie));
+    for (const cookie of setCookieHeaders) responseHeaders.append("Set-Cookie", cookie);
 
     const location = upstream.headers.get("location");
     if (location && location.startsWith("/")) responseHeaders.set("Location", location);

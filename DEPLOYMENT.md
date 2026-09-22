@@ -126,4 +126,6 @@ Render health checks are:
 - API liveness: `/health` — Express process liveness only.
 - ML: `/health` — FastAPI process/model liveness; protected ML routes still require `ML_SERVICE_TOKEN`.
 
-The proxy, readiness contract, and local verification are implemented. Production runtime, provider revisions/configuration, Playwright, CI, and production ML artifact identity remain unverified.
+The proxy and readiness contracts are implemented. Local Playwright, frontend, and backend validation has passed;
+GitHub Actions has not yet run or been remotely verified. Production runtime, provider revisions/configuration,
+production browser E2E, and production ML artifact identity remain unverified.

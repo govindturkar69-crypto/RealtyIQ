@@ -196,4 +196,6 @@ backend-api: node --test src/test/app.test.js   5 passed
 backend-api: npm test                  106 passed
 ```
 
-Playwright, CI, provider verification, production runtime, and production browser E2E have not been run or claimed here.
+Local verification includes the Playwright smoke suite and deterministic teardown across two consecutive runs.
+GitHub Actions has not yet run or been remotely verified. Provider verification, production runtime, and production
+browser E2E also remain unverified.

@@ -3,6 +3,19 @@ import next from "next";
 
 const upstreamOrigin = "http://127.0.0.1:18080";
 const upstream = createServer((request, response) => {
+  const path = new URL(request.url || "/", upstreamOrigin).pathname;
+  if (path === "/cookie-success" || path === "/cookie-client-error" || path === "/cookie-server-error") {
+    const status = path === "/cookie-success" ? 200 : path === "/cookie-client-error" ? 400 : 503;
+    response.writeHead(status, {
+      "content-type": "application/json",
+      "set-cookie": [
+        "riq_access=fixture-access; Domain=render.internal; Path=/; HttpOnly; Secure; SameSite=Lax; Priority=High; Internal-Host=render.internal",
+        "riq_csrf=fixture-csrf; Domain=render.internal; Path=/; Secure; SameSite=Lax; Max-Age=60; Priority=High",
+      ],
+    });
+    response.end(JSON.stringify({ status }));
+    return;
+  }
   if (request.url === "/health") {
     response.writeHead(200, { "content-type": "application/json" });
     response.end(JSON.stringify({ status: "ok", source: "playwright-upstream" }));
