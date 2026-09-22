@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "next": "14.2.5",
@@ -42,6 +43,7 @@
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
     "@types/leaflet": "^1.9.12",
-    "@types/three": "^0.169.0"
+    "@types/three": "^0.169.0",
+    "@playwright/test": "^1.63.0"
   }
 }

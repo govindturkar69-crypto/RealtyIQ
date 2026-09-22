@@ -5,3 +5,5 @@ out/
 .env
 *.tsbuildinfo
 next-env.d.ts
+playwright-report/
+test-results/
