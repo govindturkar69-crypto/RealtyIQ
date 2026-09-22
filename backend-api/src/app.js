@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -27,6 +28,11 @@ export function createApp() {
   app.use(morgan(env.isProd ? "combined" : "dev"));
 
   app.get("/health", (req, res) => res.json({ status: "ok", service: "backend-api", ts: Date.now() }));
+  // Readiness reflects Mongoose driver state only; no database query or ML request is issued.
+  app.get("/ready", (req, res) => {
+    const ready = mongoose.connection.readyState === 1;
+    res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "not_ready" });
+  });
 
   app.use("/api", apiLimiter, routes);
 
