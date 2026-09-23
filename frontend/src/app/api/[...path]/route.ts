@@ -40,8 +40,13 @@ function browserCookie(value: string): string | null {
 }
 
 function proxyPath(request: NextRequest, origin: URL): URL {
-  const pathname = request.nextUrl.pathname.replace(/^\/api(?=\/|$)/, "") || "/";
-  return new URL(`${pathname}${request.nextUrl.search}`, origin);
+  const pathname = request.nextUrl.pathname;
+  const upstreamPath = pathname === "/api/health"
+    ? "/health"
+    : pathname === "/api/ready"
+      ? "/ready"
+      : pathname;
+  return new URL(`${upstreamPath}${request.nextUrl.search}`, origin);
 }
 
 function requestHeaders(request: NextRequest, requestId: string): Headers {
