@@ -176,7 +176,7 @@ Add the smallest useful checks in this order:
 
 ## 9. Proxy and readiness verification
 
-The Commit 1 proxy checks cover same-origin `/api/*` path mapping, exact query preservation, HTTP method/body preservation, application-header filtering, Cookie and CSRF-header forwarding, bounded request-ID validation, timeout-to-`504`, upstream-failure-to-`502`, individual `Set-Cookie` preservation, relative-redirect safety, private/no-store caching, and absence of token exposure.
+The Commit 1 proxy foundation covers same-origin `/api/*` path mapping, exact query preservation, HTTP method/body preservation, application-header filtering, Cookie and CSRF-header forwarding, bounded request-ID validation, timeout-to-`504`, upstream-failure-to-`502`, relative-redirect safety, private/no-store caching, and absence of token exposure. Commit `877d06cae666eefac6a7fd62b1662b93ca318d56` (`fix: preserve proxy cookies on upstream errors`) adds regression coverage for sanitized `Set-Cookie` preservation on successful, `4xx`, and `5xx` responses plus unsafe-attribute filtering.
 
 The Commit 2 readiness checks cover:
 
@@ -194,8 +194,9 @@ frontend: npx tsc --noEmit             PASS
 frontend: npm run build                PASS
 backend-api: node --test src/test/app.test.js   5 passed
 backend-api: npm test                  106 passed
+frontend: npm run test:e2e              4 passed
 ```
 
-Local verification includes the Playwright smoke suite and deterministic teardown across two consecutive runs.
+Local verification includes the complete four-test Playwright suite, proxy regression coverage, and deterministic teardown across two consecutive runs.
 GitHub Actions has not yet run or been remotely verified. Provider verification, production runtime, and production
 browser E2E also remain unverified.
