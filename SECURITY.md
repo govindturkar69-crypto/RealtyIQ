@@ -7,9 +7,10 @@ Below is what was found and what was changed.
 ## 1 — Secret Leak Prevention (Gitleaks)
 **Found:** No hardcoded real secrets anywhere. Every match in a scan was a variable
 or field name (e.g. `password` params, `verifyAccessToken`), not a value. `.env` is
-gitignored in all packages; `.env.example` files ship placeholders only; the only
-browser-exposed var, `NEXT_PUBLIC_API_URL`, is a public URL. One weakness: the backend
-silently fell back to a **known dev JWT secret** when unset.
+gitignored in all packages; `.env.example` files ship placeholders only. The browser
+uses same-origin `/api/*` requests; `PROXY_UPSTREAM_API_ORIGIN` is server-only and is
+never exposed through a `NEXT_PUBLIC_*` variable. One weakness: the backend silently
+fell back to a **known dev JWT secret** when unset.
 **Fixed:**
 - `config/env.js` now **refuses to start in production** if `MONGODB_URI`,
   `JWT_ACCESS_SECRET`, or `JWT_REFRESH_SECRET` is missing, and **rejects the insecure
@@ -19,7 +20,7 @@ silently fell back to a **known dev JWT secret** when unset.
   deploying, set fresh unique secrets in your host's env and **rotate** any secret that
   was ever committed.
 
-## 2 — Personal Data Flow Audit (Bearer)
+## 2 — Personal Data Flow Audit and Authentication
 **Found & status:**
 - **Passwords** are hashed with **bcrypt** (cost 10); never stored/returned in plaintext. ✔
 - **API responses** never leak `passwordHash` or `refreshTokens` — `User.toJSON()` strips them. ✔
@@ -32,11 +33,11 @@ silently fell back to a **known dev JWT secret** when unset.
   (predictions, saved searches), wired to a **"Delete my account"** button in the dashboard.
 Browser authentication now uses HttpOnly access/refresh cookies with a CSRF double-submit
 token. Bearer headers remain supported for non-browser API clients; browser JavaScript no
-longer persists authentication tokens in localStorage.
-Because the CSRF cookie is host-only on the API domain, the approved cross-origin frontend
-obtains its value from `GET /api/auth/csrf` and keeps it in memory. Unsafe requests still
-require an `X-CSRF-Token` value matching the cookie; CORS remains restricted to the exact
-frontend origin and authentication cookies remain HttpOnly.
+longer persists authentication tokens in localStorage. Browser traffic follows
+`Browser → same-origin /api/* → Next.js proxy → Express`.
+The CSRF cookie is intentionally readable by the browser so the frontend can obtain its
+value from `GET /api/auth/csrf` and send it as `X-CSRF-Token` on unsafe requests. The API
+still validates the double-submit pair, while access and refresh cookies remain HttpOnly.
 
 ## 3 — Pre-Deploy Production Audit (ECC)
 **Fixed / verified:**

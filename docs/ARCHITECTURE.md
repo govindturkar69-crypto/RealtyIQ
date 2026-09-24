@@ -8,8 +8,10 @@ Visitor / customer / administrator
                 v
      Next.js 14 web application
                 |
-        HTTPS JSON / Bearer JWT
+        same-origin /api/*
                 v
+      Next.js frontend proxy
+                |
        Express API (system boundary)
           |                 |
           v                 v
@@ -75,9 +77,9 @@ ml-service/
 ### Authentication and refresh
 
 ```text
-Login/signup -> Express validates -> bcrypt compare/hash -> MongoDB user
-             <- user + access token + refresh token
-Browser stores tokens in localStorage/in-memory
+Browser /api/auth/* -> Next.js proxy -> Express validates -> bcrypt compare/hash -> MongoDB user
+                     <- HttpOnly access/refresh cookies + CSRF cookie
+Bearer headers remain supported for non-browser API clients
 401 -> POST /auth/refresh -> verify + stored-token check -> rotate both tokens -> retry once
 ```
 
@@ -97,7 +99,9 @@ Prediction form -> POST /api/predict -> optional JWT -> FastAPI /predict
                            result page/sessionStorage/share/PDF
 ```
 
-Prediction persistence supports account history and admin locality statistics. The public `/api/predict/:id` link exposes a stored result without authentication.
+Prediction persistence supports account history and admin locality statistics. Public
+share links use the expiring share-token route `/api/predict/:shareToken` without
+authentication; owner/admin endpoints issue or revoke those links.
 
 ### Listing and admin connection
 

@@ -71,13 +71,18 @@ repo — they're gitignored.
    | `JWT_ACCESS_SECRET` | a long random string |
    | `JWT_REFRESH_SECRET` | a different long random string |
    | `ML_SERVICE_TOKEN` | the same unique service token configured on the ML service |
-4. Create and wait for `MongoDB connected` in the logs. Test `https://realtyiq-api.onrender.com/health`.
+4. Create and wait for `MongoDB connected` in the logs. Test `https://realtyiq-api.onrender.com/health`; use `/ready` to confirm the API's MongoDB dependency is connected.
 5. **Do not run seed or CLI account scripts against this Render/Atlas service.**
    `npm run seed`, `npm run bootstrap-admin`, `seed-users.js`, and `set-password.js`
    fail closed for production-capable targets. Production administrator provisioning,
    if required, is a separately approved break-glass operation; it is not a generic
    deployment step. Use the CLI only with an explicitly allowlisted disposable target
    and the required runtime credentials/confirmation markers.
+
+Authentication cookies are HttpOnly and state-changing requests require the CSRF header.
+The canonical browser path is same-origin frontend `/api/*` through the Next.js proxy;
+the browser does not call the Render API directly. `PROXY_UPSTREAM_API_ORIGIN` remains
+server-only and must point to the approved Express API origin.
 
 > Tip: `render.yaml` at the repo root can create both Render services automatically via
 > **New → Blueprint** instead of doing steps 2–3 by hand.
@@ -95,9 +100,8 @@ repo — they're gitignored.
 ---
 
 ## 5. Wire the last connection
-1. Copy your Vercel URL.
-2. Back in Render → realtyiq-api → set `CORS_ORIGIN` to that Vercel URL → **Manual Deploy / Save**
-   (so the browser is allowed to call the API).
+1. Confirm the Vercel URL matches the API `CORS_ORIGIN` value configured before API startup.
+2. If the URL changes, update `CORS_ORIGIN` and redeploy before opening the site.
 3. Open your Vercel URL → sign up or log in with an account you created → make a prediction.
 
 ---
@@ -126,6 +130,8 @@ Render health checks are:
 - API liveness: `/health` — Express process liveness only.
 - ML: `/health` — FastAPI process/model liveness; protected ML routes still require `ML_SERVICE_TOKEN`.
 
-The proxy and readiness contracts are implemented. Local Playwright, frontend, and backend validation has passed;
-GitHub Actions has not yet run or been remotely verified. Production runtime, provider revisions/configuration,
-production browser E2E, and production ML artifact identity remain unverified.
+The proxy and readiness contracts are implemented. The v1.0.0 release record supplied
+verification evidence for local validation, GitHub Actions, provider deployment,
+production browser E2E, and Vercel-to-Render integration; those claims are release
+evidence and are not re-executed by this document. Repeat provider and production
+checks after any deployment or environment change.

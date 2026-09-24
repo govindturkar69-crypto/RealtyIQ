@@ -5,7 +5,9 @@
 - Express base URL: `http://localhost:8000`; application routes use `/api`.
 - ML base URL: `http://localhost:8001`; normally called only by Express and protected by
   the shared `ML_SERVICE_TOKEN`.
-- Protected Express endpoints require `Authorization: Bearer <accessToken>`.
+- Non-browser protected Express clients may use `Authorization: Bearer <accessToken>`.
+- Browser sessions use HttpOnly access/refresh cookies with a CSRF double-submit token;
+  bearer tokens remain supported for non-browser API clients.
 - Roles: `user`, `agent`, `broker`, `admin`; “admin” below means admin-only middleware.
 - Express success responses are JSON unless a delete returns a simple message. Errors use:
 
@@ -44,7 +46,10 @@ The Express health endpoint does not prove MongoDB or ML readiness. Admin ML sta
 
 Passwords are minimum eight characters. Login does not disclose whether email or password was wrong. Disabled users cannot pass authenticated middleware.
 
-Cross-origin browser clients bootstrap CSRF with `GET /api/auth/csrf` using credentials, retain the returned token in memory, and send it as `X-CSRF-Token` on unsafe requests. The API requires that header to match the host-only `riq_csrf` cookie; authentication cookies remain HttpOnly.
+Browser clients use same-origin `/api/*` paths through the Next.js frontend proxy.
+They bootstrap CSRF with `GET /api/auth/csrf` using credentials, retain the returned
+token in memory, and send it as `X-CSRF-Token` on unsafe requests. The API requires that
+header to match the `riq_csrf` cookie; access and refresh cookies remain HttpOnly.
 
 ## 4. Listings
 

@@ -24,7 +24,9 @@ These are mostly pure/schema tests with a small HTTP integration surface. They d
 
 ### Frontend
 
-No automated unit, component, accessibility, visual-regression, or end-to-end test suite is tracked. Verification relies on lint/build and manual flows.
+The tracked browser suite uses Playwright for deterministic local smoke and proxy
+verification. No frontend unit, component, accessibility, or visual-regression suite is
+tracked; those areas still rely on lint/build and manual flows.
 
 ### Current audit status
 
@@ -197,6 +199,8 @@ backend-api: npm test                  106 passed
 frontend: npm run test:e2e              4 passed
 ```
 
-Local verification includes the complete four-test Playwright suite, proxy regression coverage, and deterministic teardown across two consecutive runs.
-GitHub Actions has not yet run or been remotely verified. Provider verification, production runtime, and production
-browser E2E also remain unverified.
+Local verification includes the complete four-test Playwright suite, proxy regression
+coverage, and deterministic teardown across two consecutive runs. The supplied v1.0.0
+release verification also records successful GitHub Actions, provider/deployment, and
+production browser checks; those are supplied release evidence and were not independently
+rerun during this documentation change.
