@@ -13,6 +13,15 @@ let refreshInFlight: Promise<boolean> | null = null;
 let csrfTokenValue: string | null = null;
 let csrfInFlight: Promise<string> | null = null;
 
+export const SESSION_EXPIRED_EVENT = "realtyiq:session-expired";
+
+export function subscribeToSessionExpired(listener: () => void) {
+  if (typeof window === "undefined") return () => {};
+  const handler: EventListener = () => listener();
+  window.addEventListener(SESSION_EXPIRED_EVENT, handler);
+  return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handler);
+}
+
 export function setTokens(a: string | null, r: string | null) {
   accessToken = a; refreshToken = r;
 }
@@ -118,6 +127,12 @@ export function clearCsrfToken() {
   csrfTokenValue = null;
 }
 
+function expireSession() {
+  setTokens(null, null);
+  clearCsrfToken();
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+}
+
 async function bootstrapCsrf(): Promise<string> {
   if (csrfTokenValue) return csrfTokenValue;
   if (csrfInFlight) return csrfInFlight;
@@ -141,15 +156,14 @@ async function performRefresh(): Promise<boolean> {
       method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
       credentials: "include", body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,
     });
-    if (!res.ok) { setTokens(null, null); clearCsrfToken(); return false; }
+    if (!res.ok) { expireSession(); return false; }
     const parsed = await parseResponse(res);
-    if (parsed.malformed) { setTokens(null, null); clearCsrfToken(); return false; }
+    if (parsed.malformed) { expireSession(); return false; }
     const data = isRecord(parsed.value) ? parsed.value : {};
     setTokens(typeof data.accessToken === "string" ? data.accessToken : null, typeof data.refreshToken === "string" ? data.refreshToken : null);
     return true;
   } catch {
-    setTokens(null, null);
-    clearCsrfToken();
+    expireSession();
     return false;
   }
 }

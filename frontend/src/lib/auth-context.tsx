@@ -1,6 +1,6 @@
 "use client";
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { api, setTokens, loadTokens } from "./api";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { api, setTokens, loadTokens, subscribeToSessionExpired } from "./api";
 import type { User } from "./types";
 
 interface AuthCtx {
@@ -17,10 +17,21 @@ const Ctx = createContext<AuthCtx | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const sessionGeneration = useRef(0);
+
+  useEffect(() => subscribeToSessionExpired(() => {
+    sessionGeneration.current += 1;
+    setTokens(null, null);
+    setUser(null);
+    setLoading(false);
+  }), []);
 
   useEffect(() => {
+    const generation = sessionGeneration.current;
     loadTokens();
-    api.me().then((r) => setUser(r.user)).catch(() => setTokens(null, null)).finally(() => setLoading(false));
+    api.me().then((r) => {
+      if (sessionGeneration.current === generation) setUser(r.user);
+    }).catch(() => setTokens(null, null)).finally(() => setLoading(false));
   }, []);
 
   async function login(email: string, password: string) {
