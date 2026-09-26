@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +28,7 @@ export function PredictForm() {
   const [enums, setEnums] = useState<LocalityEnums | null>(null);
   const [optionsError, setOptionsError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submitInFlight = useRef(false);
 
   const form = useForm<PredictInput>({
     resolver: zodResolver(predictSchema),
@@ -67,14 +68,27 @@ export function PredictForm() {
   }
 
   async function onSubmit(values: PredictInput) {
+    if (submitInFlight.current) return;
+    submitInFlight.current = true;
     setSubmitting(true);
     try {
-      const result = (await api.predict(values)) as PredictionResult;
-      sessionStorage.setItem("riq_prediction", JSON.stringify({ input: values, result }));
+      let result: PredictionResult;
+      try {
+        result = (await api.predict(values)) as PredictionResult;
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Prediction failed");
+        return;
+      }
+
+      try {
+        sessionStorage.setItem("riq_prediction", JSON.stringify({ input: values, result }));
+      } catch {
+        toast.warning("Prediction was created successfully, but the result could not be saved in this browser session. Please avoid retrying.");
+        return;
+      }
+
       toast.success("Valuation ready");
       router.push("/results");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Prediction failed");
     } finally {
       setSubmitting(false);
     }
@@ -100,7 +114,7 @@ export function PredictForm() {
         <CardTitle>{STEP_TITLES[step]}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} onChange={() => { if (!submitting) submitInFlight.current = false; }} className="space-y-4">
           {step === 0 && (
             <>
               <Field label="Locality" error={errors.location?.message}>
