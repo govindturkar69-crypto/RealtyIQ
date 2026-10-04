@@ -1,5 +1,5 @@
 "use client";
-import type { AuthResponse, UserRole } from "./types";
+import type { AuthResponse, PredictionResult, UserRole } from "./types";
 
 const BASE = "";
 // Covers the API's bounded ML call (up to 8s) plus normal browser/network overhead.
@@ -205,9 +205,11 @@ export const api = {
   users: () => apiFetch("/api/auth/admin/users"),
   manageUser: (id: string, patch: { role?: UserRole; isActive?: boolean }) =>
     apiFetch(`/api/auth/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
-  predict: (b: Record<string, unknown>) => apiFetch("/api/predict", { method: "POST", body: JSON.stringify(b) }),
+  predict: (b: Record<string, unknown>) => apiFetch<PredictionResult>("/api/predict", { method: "POST", body: JSON.stringify(b) }),
   featureImportance: () => apiFetch("/api/predict/feature-importance?top=10"),
-  history: () => apiFetch("/api/predict/history"),
+  history: () => apiFetch<unknown>("/api/predict/history"),
+  predictionDetail: (id: string) => apiFetch<unknown>(`/api/predict/history/${encodeURIComponent(id)}`),
+  sharePrediction: (id: string) => apiFetch<unknown>(`/api/predict/${encodeURIComponent(id)}/share`, { method: "POST", body: "{}" }),
   listings: (qs: string) => apiFetch(`/api/listings${qs}`),
   listingLocalities: () => apiFetch<{ localities: string[] }>("/api/listings/meta/localities"),
   listing: (id: string) => apiFetch(`/api/listings/${id}`),
@@ -230,7 +232,7 @@ export const api = {
   favoriteIds: () => apiFetch("/api/favorites/ids"),
   addFavorite: (id: string) => apiFetch(`/api/favorites/${id}`, { method: "POST" }),
   removeFavorite: (id: string) => apiFetch(`/api/favorites/${id}`, { method: "DELETE" }),
-  getPrediction: (id: string) => apiFetch(`/api/predict/${id}`),
+  getPrediction: (id: string) => apiFetch<unknown>(`/api/predict/${encodeURIComponent(id)}`),
   inquiries: () => apiFetch("/api/inquiries"),
   createInquiry: (listingId: string, message: string) => apiFetch("/api/inquiries", { method: "POST", body: JSON.stringify({ listingId, message }) }),
   adminInquiries: () => apiFetch("/api/inquiries/admin"),

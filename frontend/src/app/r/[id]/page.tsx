@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfidenceBar } from "@/components/results/confidence-bar";
+import { publicPredictionSchema } from "@/lib/schemas";
 
 interface Shared {
   input: Record<string, unknown>;
@@ -28,7 +29,11 @@ export default function SharedPredictionPage() {
 
   useEffect(() => {
     if (!id) return;
-    api.getPrediction(id).then((r) => setData(r as Shared)).catch(() => setError(true));
+    api.getPrediction(id).then((response) => {
+      const parsed = publicPredictionSchema.safeParse(response);
+      if (!parsed.success) throw new Error("Invalid shared prediction response");
+      setData(parsed.data);
+    }).catch(() => setError(true));
   }, [id]);
 
   if (error) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-muted-foreground">This shared valuation was not found.</div>;

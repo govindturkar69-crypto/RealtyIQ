@@ -1,7 +1,7 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, FrontendApiError } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
@@ -12,10 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { predictionHistorySchema } from "@/lib/schemas";
 
 interface HistoryItem {
   _id: string; locality: string; predictedPrice: number; confidenceLow: number;
-  confidenceHigh: number; pricePerSqft: number; createdAt: string; input: Record<string, unknown>;
+  confidenceHigh: number; pricePerSqft?: number; createdAt: string; input: Record<string, unknown>;
 }
 
 function DashboardInner() {
@@ -56,10 +57,25 @@ function DashboardInner() {
     }
   }
   const [items, setItems] = useState<HistoryItem[] | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
-  useEffect(() => {
-    api.history().then((r) => setItems((r as { items: HistoryItem[] }).items)).catch(() => setItems([]));
+  const loadHistory = useCallback(async () => {
+    setItems(null);
+    setHistoryError(null);
+    try {
+      const r = await api.history();
+      const parsed = predictionHistorySchema.safeParse(r);
+      if (!parsed.success) throw new Error("Invalid prediction history response");
+      setItems(parsed.data.items);
+    } catch (error) {
+      setItems([]);
+      setHistoryError(error instanceof FrontendApiError && error.kind === "timeout"
+        ? "Your recent activity took too long to load. Please try again."
+        : "We couldn't load your recent activity. Please try again.");
+    }
   }, []);
+
+  useEffect(() => { void loadHistory(); }, [loadHistory]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
@@ -73,10 +89,16 @@ function DashboardInner() {
 
       {items === null ? (
         <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
+      ) : historyError ? (
+        <Card><CardContent className="flex flex-col items-center gap-3 p-10 text-center" role="alert">
+          <p className="text-sm text-muted-foreground">{historyError}</p>
+          <Button variant="outline" size="sm" onClick={() => void loadHistory()}>Try again</Button>
+        </CardContent></Card>
       ) : items.length ? (
         <div className="space-y-3">
           {items.map((h) => (
-            <Card key={h._id}>
+            <Link key={h._id} href={`/results?id=${encodeURIComponent(h._id)}`}>
+            <Card>
               <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
                 <div>
                   <div className="font-medium">{h.locality || "—"}</div>
@@ -90,6 +112,7 @@ function DashboardInner() {
                 </div>
               </CardContent>
             </Card>
+            </Link>
           ))}
         </div>
       ) : (

@@ -74,19 +74,30 @@ export function PredictForm() {
     try {
       let result: PredictionResult;
       try {
-        result = (await api.predict(values)) as PredictionResult;
+        result = await api.predict(values);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Prediction failed");
         return;
       }
 
+      let stored = true;
       try {
         sessionStorage.setItem("riq_prediction", JSON.stringify({ input: values, result }));
       } catch {
-        toast.warning("Prediction was created successfully, but the result could not be saved in this browser session. Please avoid retrying.");
+        stored = false;
+      }
+
+      if (result.recordId && /^[a-f\d]{24}$/i.test(result.recordId)) {
+        if (stored) toast.success("Valuation ready");
+        else toast.warning("Valuation created. Browser storage was unavailable; loading your saved valuation.");
+        router.push(`/results?id=${encodeURIComponent(result.recordId)}`);
         return;
       }
 
+      if (!stored) {
+        toast.warning("Prediction was created successfully, but the result could not be saved in this browser session. Please avoid retrying.");
+        return;
+      }
       toast.success("Valuation ready");
       router.push("/results");
     } finally {

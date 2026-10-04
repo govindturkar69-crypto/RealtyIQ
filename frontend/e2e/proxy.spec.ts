@@ -61,6 +61,12 @@ test("preserves the application API prefix and query string", async ({ request }
   });
 });
 
+test("keeps authenticated prediction detail responses private and uncached", async ({ request }) => {
+  const response = await request.get("/api/predict/history/507f1f77bcf86cd799439021");
+  expect(response.status()).toBe(404);
+  expect(response.headers()["cache-control"]).toBe("private, no-store");
+});
+
 test("preserves root health mappings and application POST bodies", async ({ request }) => {
   const healthResponse = await request.get("/api/health");
   expect(healthResponse.status()).toBe(200);

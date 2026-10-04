@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, Download, Share2, Sparkles } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, FrontendApiError } from "@/lib/api";
 import type { FeatureImportance, Listing, Paginated, PredictionResult } from "@/lib/types";
 import type { PredictInput } from "@/lib/schemas";
 import { formatINR } from "@/lib/utils";
@@ -19,11 +19,13 @@ import { FeatureImportanceChart } from "@/components/charts/feature-importance-c
 import { Result3D } from "@/components/three/result-3d";
 import { ListingCard } from "@/components/listings/listing-card";
 import { EmiCalculator } from "@/components/emi-calculator";
-import { predictSchema } from "@/lib/schemas";
+import { predictSchema, predictionDetailSchema, predictionShareSchema } from "@/lib/schemas";
 import { z } from "zod";
 import { paginatedListingSchema, parseDiscoveryPayload } from "@/lib/discovery-schemas";
+import { ProtectedRoute } from "@/components/protected-route";
 
-interface Stored { input: PredictInput; result: PredictionResult; }
+interface Stored { input: PredictInput; result: PredictionResult; recordId?: string; }
+type Supplementary<T> = { status: "loading" } | { status: "success"; data: T } | { status: "empty" } | { status: "failure" };
 
 const storedPredictionSchema = z.object({
   input: predictSchema,
@@ -36,36 +38,112 @@ const storedPredictionSchema = z.object({
     currency: z.string().min(1),
     model_name: z.string().min(1),
     predictionId: z.string().regex(/^[A-Za-z0-9_-]{40,}$/).optional(),
+    recordId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   }).strict(),
 }).strict();
 
 export default function ResultsPage() {
+  return <Suspense fallback={<div className="mx-auto max-w-4xl px-4 py-12"><Skeleton className="h-64 w-full" /></div>}><ResultsRoute /></Suspense>;
+}
+
+function ResultsRoute() {
+  const recordId = useSearchParams().get("id");
+  return recordId
+    ? <ProtectedRoute><ResultsContent recordId={recordId} /></ProtectedRoute>
+    : <ResultsContent />;
+}
+
+function ResultsContent({ recordId }: { recordId?: string | null }) {
   const router = useRouter();
   const [data, setData] = useState<Stored | null>(null);
-  const [features, setFeatures] = useState<FeatureImportance[] | null>(null);
-  const [similar, setSimilar] = useState<Listing[] | null>(null);
+  const [primaryStatus, setPrimaryStatus] = useState<"loading" | "ready" | "unavailable" | "failure">("loading");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [features, setFeatures] = useState<Supplementary<FeatureImportance[]>>({ status: "loading" });
+  const [similar, setSimilar] = useState<Supplementary<Listing[]>>({ status: "loading" });
+
+  const loadFeatures = useCallback(async () => {
+    setFeatures({ status: "loading" });
+    try {
+      const parsed = z.array(z.object({ feature: z.string(), importance: z.number().finite() }).strict()).safeParse(await api.featureImportance());
+      if (!parsed.success) throw new Error("Invalid feature response");
+      setFeatures(parsed.data.length ? { status: "success", data: parsed.data } : { status: "empty" });
+    } catch {
+      setFeatures({ status: "failure" });
+    }
+  }, []);
+
+  const loadSimilar = useCallback(async (input: PredictInput) => {
+    setSimilar({ status: "loading" });
+    try {
+      const result = parseDiscoveryPayload(paginatedListingSchema, await api.listings(`?locality=${encodeURIComponent(input.location)}&limit=3`)) as Paginated<Listing>;
+      setSimilar(result.items.length ? { status: "success", data: result.items } : { status: "empty" });
+    } catch {
+      setSimilar({ status: "failure" });
+    }
+  }, []);
 
   useEffect(() => {
+    let active = true;
+    setData(null);
+    setPrimaryStatus("loading");
+    const showResult = (stored: Stored) => {
+      if (!active) return;
+      setData(stored);
+      setPrimaryStatus("ready");
+      void loadFeatures();
+      void loadSimilar(stored.input);
+    };
+
+    if (recordId) {
+      api.predictionDetail(recordId).then((response) => {
+        const parsed = predictionDetailSchema.safeParse(response);
+        if (!parsed.success) throw new Error("Invalid prediction response");
+        const detail = parsed.data;
+        if (detail.recordId.toLowerCase() !== recordId.toLowerCase()) {
+          setPrimaryStatus("unavailable");
+          return;
+        }
+        showResult({
+          recordId: detail.recordId,
+          input: detail.input,
+          result: {
+            predicted_price: detail.predicted_price,
+            confidence_low: detail.confidence_low,
+            confidence_high: detail.confidence_high,
+            confidence_interval_pct: detail.confidence_interval_pct,
+            price_per_sqft: detail.price_per_sqft,
+            currency: detail.currency,
+            model_name: detail.model_name,
+            recordId: detail.recordId,
+          },
+        });
+      }).catch((error: unknown) => {
+        if (!active) return;
+        setPrimaryStatus(error instanceof FrontendApiError && error.status === 404 ? "unavailable" : "failure");
+      });
+      return () => { active = false; };
+    }
+
     let raw: string | null = null;
     try {
       raw = typeof window !== "undefined" ? sessionStorage.getItem("riq_prediction") : null;
     } catch {
       router.replace("/predict");
-      return;
+      return () => { active = false; };
     }
     const stored = parseStoredPrediction(raw, (value) => storedPredictionSchema.safeParse(value));
     if (!stored) {
       try { sessionStorage.removeItem("riq_prediction"); } catch { /* storage may be unavailable */ }
       router.replace("/predict");
-      return;
+      return () => { active = false; };
     }
-    setData(stored);
-    api.featureImportance().then((f) => setFeatures(f as FeatureImportance[])).catch(() => setFeatures([]));
-    api.listings(`?locality=${encodeURIComponent(stored.input.location)}&limit=3`)
-      .then((r) => setSimilar((parseDiscoveryPayload(paginatedListingSchema, r) as Paginated<Listing>).items)).catch(() => setSimilar([]));
-  }, [router]);
+    showResult(stored);
+    return () => { active = false; };
+  }, [loadAttempt, loadFeatures, loadSimilar, recordId, router]);
 
-  if (!data) return <div className="mx-auto max-w-4xl px-4 py-12"><Skeleton className="h-64 w-full" /></div>;
+  if (primaryStatus === "loading" || (primaryStatus === "ready" && recordId && data?.recordId?.toLowerCase() !== recordId.toLowerCase())) return <div className="mx-auto max-w-4xl px-4 py-12"><Skeleton className="h-64 w-full" /></div>;
+  if (primaryStatus === "unavailable") return <div className="mx-auto max-w-2xl px-4 py-16 text-center"><Card><CardContent className="space-y-4 p-8"><h1 className="text-xl font-semibold">Valuation unavailable</h1><p className="text-sm text-muted-foreground">This valuation could not be found or is no longer available.</p><div className="flex justify-center gap-3"><Link href="/dashboard"><Button variant="outline">Prediction history</Button></Link><Link href="/predict"><Button>New prediction</Button></Link></div></CardContent></Card></div>;
+  if (primaryStatus === "failure" || !data) return <div className="mx-auto max-w-2xl px-4 py-16 text-center"><Card><CardContent className="space-y-4 p-8"><h1 className="text-xl font-semibold">We couldn&apos;t load this valuation</h1><p className="text-sm text-muted-foreground">Please try again or return to your prediction history.</p><div className="flex justify-center gap-3"><Button variant="outline" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</Button><Link href="/dashboard"><Button>Prediction history</Button></Link></div></CardContent></Card></div>;
   const { input, result } = data;
 
   return (
@@ -73,10 +151,21 @@ export default function ResultsPage() {
       <div className="mb-4 flex items-center justify-between">
         <Link href="/predict"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4" /> New estimate</Button></Link>
         <div className="flex gap-2">
-          {result.predictionId && (
-            <Button variant="outline" size="sm" onClick={() => {
-              navigator.clipboard.writeText(`${window.location.origin}/r/${result.predictionId}`);
-              toast.success("Share link copied");
+          {(result.predictionId || data.recordId) && (
+            <Button variant="outline" size="sm" onClick={async () => {
+              try {
+                let token = result.predictionId;
+                if (!token && data.recordId) {
+                  const parsed = predictionShareSchema.safeParse(await api.sharePrediction(data.recordId));
+                  if (!parsed.success) throw new Error("Invalid share response");
+                  token = parsed.data.shareToken;
+                }
+                if (!token) throw new Error("Share link unavailable");
+                await navigator.clipboard.writeText(`${window.location.origin}/r/${token}`);
+                toast.success("Share link copied");
+              } catch {
+                toast.error("Could not create or copy a share link. Please try again.");
+              }
             }}>
               <Share2 className="h-4 w-4" /> Share
             </Button>
@@ -116,9 +205,10 @@ export default function ResultsPage() {
         <CardHeader><CardTitle>Why this price?</CardTitle></CardHeader>
         <CardContent>
           <p className="mb-4 text-sm text-muted-foreground">Features the model weighs most when valuing properties.</p>
-          {features === null ? <Skeleton className="h-64 w-full" /> :
-            features.length ? <FeatureImportanceChart data={features} /> :
-            <p className="text-sm text-muted-foreground">Feature importance unavailable.</p>}
+          {features.status === "loading" ? <Skeleton className="h-64 w-full" /> :
+            features.status === "success" ? <FeatureImportanceChart data={features.data} /> :
+            features.status === "empty" ? <p className="text-sm text-muted-foreground">Feature importance unavailable.</p> :
+            <div className="space-y-2"><p className="text-sm text-muted-foreground">Feature importance could not be loaded.</p><Button variant="outline" size="sm" onClick={() => void loadFeatures()}>Retry</Button></div>}
         </CardContent>
       </Card>
 
@@ -129,10 +219,12 @@ export default function ResultsPage() {
           <h2 className="text-xl font-semibold">Similar listings in {input.location}</h2>
           <Link href={`/listings?locality=${encodeURIComponent(input.location)}`}><Button variant="link" size="sm">View all</Button></Link>
         </div>
-        {similar === null ? (
+        {similar.status === "loading" ? (
           <div className="grid gap-4 sm:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-64 w-full" />)}</div>
-        ) : similar.length ? (
-          <div className="grid gap-4 sm:grid-cols-3">{similar.map((l) => <ListingCard key={l._id} listing={l} />)}</div>
+        ) : similar.status === "success" ? (
+          <div className="grid gap-4 sm:grid-cols-3">{similar.data.map((l) => <ListingCard key={l._id} listing={l} />)}</div>
+        ) : similar.status === "failure" ? (
+          <Card><CardContent className="space-y-3 p-6 text-center text-sm text-muted-foreground"><p>Similar listings could not be loaded.</p><Button variant="outline" size="sm" onClick={() => void loadSimilar(input)}>Retry</Button></CardContent></Card>
         ) : (
           <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">No listings found in this locality yet.</CardContent></Card>
         )}

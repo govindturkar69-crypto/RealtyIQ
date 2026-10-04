@@ -17,7 +17,7 @@ export interface Paginated<T> { items: T[]; page: number; limit: number; total: 
 export interface PredictionResult {
   predicted_price: number; confidence_low: number; confidence_high: number;
   confidence_interval_pct: number; price_per_sqft: number; currency: string;
-  model_name: string; predictionId?: string;
+  model_name: string; predictionId?: string; recordId?: string;
 }
 
 export interface FeatureImportance { feature: string; importance: number; }

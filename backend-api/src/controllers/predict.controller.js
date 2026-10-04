@@ -7,6 +7,51 @@ import { Listing } from "../models/Listing.js";
 import { env } from "../config/env.js";
 import { createShareToken, hashToken } from "../utils/tokenHash.js";
 
+const predictionInputFields = ["location", "area_type", "availability_status", "total_sqft", "bhk", "bath", "balcony"];
+
+function safePredictionInput(input) {
+  return Object.fromEntries(predictionInputFields
+    .filter((field) => input?.[field] !== undefined)
+    .map((field) => [field, input[field]]));
+}
+
+function pricePerSqft(record) {
+  const stored = record.pricePerSqft;
+  if (Number.isFinite(stored)) return stored;
+  const area = Number(record.input?.total_sqft);
+  const price = Number(record.predictedPrice);
+  return area > 0 && Number.isFinite(price) ? price / area : null;
+}
+
+function predictionHistoryDto(record) {
+  return {
+    _id: String(record._id),
+    input: safePredictionInput(record.input),
+    predictedPrice: record.predictedPrice,
+    confidenceLow: record.confidenceLow,
+    confidenceHigh: record.confidenceHigh,
+    ...(pricePerSqft(record) === null ? {} : { pricePerSqft: pricePerSqft(record) }),
+    locality: record.locality,
+    createdAt: record.createdAt,
+  };
+}
+
+function predictionDetailDto(record) {
+  return {
+    recordId: String(record._id),
+    input: safePredictionInput(record.input),
+    predicted_price: record.predictedPrice,
+    confidence_low: record.confidenceLow,
+    confidence_high: record.confidenceHigh,
+    confidence_interval_pct: 95,
+    price_per_sqft: pricePerSqft(record),
+    currency: "INR",
+    model_name: record.modelName || "Model details unavailable",
+    locality: record.locality || record.input?.location,
+    createdAt: record.createdAt,
+  };
+}
+
 export const predict = asyncHandler(async (req, res) => {
   const result = await mlService.predict(req.body);
   const share = createShareToken(env.shareTokenTtlMs);
@@ -24,7 +69,11 @@ export const predict = asyncHandler(async (req, res) => {
     shareExpiresAt: share.expiresAt,
     expiresAt: new Date(Date.now() + (req.user ? env.predictionRetentionDays : 1) * 24 * 60 * 60 * 1000),
   });
-  res.json({ ...result, predictionId: share.token });
+  res.json({
+    ...result,
+    predictionId: share.token,
+    ...(req.user && ["user", "admin"].includes(req.user.role) ? { recordId: String(record._id) } : {}),
+  });
 });
 
 export const featureImportance = asyncHandler(async (req, res) => {
@@ -46,8 +95,23 @@ export const options = asyncHandler(async (req, res) => {
 });
 
 export const history = asyncHandler(async (req, res) => {
-  const items = await Prediction.find({ user: req.user.sub }).sort({ createdAt: -1 }).limit(50).lean();
-  res.json({ items });
+  const records = await Prediction.find({ user: req.user.sub, $or: [{ expiresAt: { $gt: new Date() } }, { expiresAt: { $exists: false } }] })
+    .select("_id input predictedPrice confidenceLow confidenceHigh pricePerSqft locality createdAt")
+    .sort({ createdAt: -1 }).limit(50).lean();
+  res.json({ items: records.map(predictionHistoryDto) });
+});
+
+export const getPredictionDetail = asyncHandler(async (req, res) => {
+  const filter = {
+    _id: req.params.id,
+    user: req.user.sub,
+    $or: [{ expiresAt: { $gt: new Date() } }, { expiresAt: { $exists: false } }],
+  };
+  const record = await Prediction.findOne(filter)
+    .select("_id user input predictedPrice confidenceLow confidenceHigh pricePerSqft modelName locality createdAt expiresAt")
+    .lean();
+  if (!record) throw ApiError.notFound("Prediction not found");
+  res.set("Cache-Control", "private, no-store").json(predictionDetailDto(record));
 });
 
 export function isLegacyShareable(record, now = new Date(), graceMs = env.legacyShareGraceMs) {
