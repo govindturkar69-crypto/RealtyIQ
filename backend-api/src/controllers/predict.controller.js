@@ -144,7 +144,7 @@ export const getPredictionById = asyncHandler(async (req, res) => {
   const record = await findPublicPrediction(req.params.id);
   if (!record) throw ApiError.notFound("Prediction not found");
   res.json({
-    input: record.input,
+    input: safePredictionInput(record.input),
     predicted_price: record.predictedPrice,
     confidence_low: record.confidenceLow,
     confidence_high: record.confidenceHigh,
