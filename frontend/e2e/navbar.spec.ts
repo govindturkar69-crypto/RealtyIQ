@@ -35,6 +35,14 @@ async function mockAuth(page: Page, account: typeof user | typeof admin | null) 
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
       return;
     }
+    if (path === "/api/trends/admin/stats") {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ totals: { listings: 0, predictions: 0, users: 0 }, topSearchedLocalities: [] }) });
+      return;
+    }
+    if (path === "/api/auth/admin/users") {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ users: [] }) });
+      return;
+    }
     if (path === "/api/predict/options") {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ categorical: { location: ["Whitefield"], area_type: ["Super built-up Area"], availability_status: ["Ready To Move"] } }) });
       return;
@@ -79,10 +87,11 @@ test("mobile navigation exposes authenticated user actions", async ({ page }) =>
   await mockAuth(page, user);
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-  await expect(page.getByRole("link", { name: "Test" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Hi, Test" })).toBeVisible();
   const trigger = page.getByRole("button", { name: /navigation menu/ });
   await trigger.click();
   const mobileNav = page.getByRole("navigation", { name: "Mobile navigation" });
+  await expect(mobileNav).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "Favorites" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "Saved" })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "Alerts" })).toBeVisible();

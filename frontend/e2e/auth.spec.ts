@@ -121,7 +121,7 @@ test("authenticated /me response renders the protected dashboard", async ({ page
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByRole("heading", { name: "Hi, Test" })).toBeVisible();
-  await expect(page.getByText("test@example.com")).toBeVisible();
+  await expect(page.locator("input:disabled")).toHaveValue("test@example.com");
   await expect(page.getByRole("button", { name: "Logout" })).toBeVisible();
 });
 

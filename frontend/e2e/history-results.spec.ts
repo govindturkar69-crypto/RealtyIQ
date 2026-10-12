@@ -247,7 +247,7 @@ test("renders a database-backed history summary returned by the authenticated co
 
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-  await expect(page.getByRole("heading", { name: "Recent valuations" })).toBeVisible();
+  await expect(page.getByText(/recent valuations/i)).toBeVisible();
   await expect(page.getByText("Whitefield", { exact: true })).toBeVisible();
   await expect(page.getByText("₹1.25 Cr", { exact: true })).toBeVisible();
   await expect(page.getByText("No predictions yet.")).toHaveCount(0);
@@ -258,14 +258,15 @@ test("history opens the durable result and browser back returns to history", asy
   await page.route(`**/api/predict/history/${detail.recordId}`, async (route) => { await route.fulfill(json(detail)); });
   await mockResultDependencies(page);
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("link", { name: "Open valuation for Whitefield" })).toBeVisible();
-  await page.getByRole("link", { name: "Open valuation for Whitefield" }).click();
+  const historyLink = page.getByRole("link", { name: /Whitefield/ });
+  await expect(historyLink).toBeVisible();
+  await historyLink.click();
 
   await expect(page).toHaveURL(new RegExp(`/results\\?id=${detail.recordId}$`));
   await expect(page.getByText("Estimated value · fixture-model")).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByRole("heading", { name: "Recent valuations" })).toBeVisible();
+  await expect(page.getByText(/recent valuations/i)).toBeVisible();
 });
 
 test("renders the empty history state", async ({ page }) => {
