@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     tokenVersion: { type: Number, default: 0 },
     adminMutationVersion: { type: Number, default: 0, select: false },
+    savedSearchMutationVersion: { type: Number, default: 0, select: false },
     refreshTokens: { type: [String], default: [], select: false },
     refreshTokenHashes: { type: [String], default: [], select: false },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Listing" }],

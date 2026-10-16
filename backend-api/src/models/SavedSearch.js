@@ -10,4 +10,6 @@ const savedSearchSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+savedSearchSchema.index({ user: 1, createdAt: -1 });
+
 export const SavedSearch = mongoose.model("SavedSearch", savedSearchSchema);
