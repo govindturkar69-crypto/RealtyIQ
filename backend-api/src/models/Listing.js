@@ -19,6 +19,7 @@ const listingSchema = new mongoose.Schema(
     description: { type: String, default: "" },
     listedDate: { type: Date, default: Date.now, index: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

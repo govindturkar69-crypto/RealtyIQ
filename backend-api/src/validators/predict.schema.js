@@ -11,5 +11,9 @@ export const predictSchema = z.object({
 });
 
 export const compareSchema = z.object({
-  listingIds: z.array(z.string()).min(2).max(3),
+  listingIds: z.array(z.string().regex(/^[a-f\d]{24}$/i, "Invalid listing identifier").transform((value) => value.toLowerCase())).min(2).max(3),
+}).superRefine((value, ctx) => {
+  if (new Set(value.listingIds).size !== value.listingIds.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["listingIds"], message: "Duplicate listings are not allowed" });
+  }
 });

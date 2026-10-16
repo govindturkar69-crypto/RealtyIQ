@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const listingSortSchema = z.enum(["newest", "price_asc", "price_desc", "sqft_desc", "ppsf_asc"]);
+
 export const createListingSchema = z.object({
   title: z.string().min(3),
   city: z.string().default("Bengaluru"),
@@ -20,19 +22,33 @@ export const createListingSchema = z.object({
 export const updateListingSchema = createListingSchema.partial();
 
 export const listingQuerySchema = z.object({
-  city: z.string().optional(),
-  locality: z.string().optional(),
+  city: z.string().trim().max(80).optional(),
+  locality: z.string().trim().max(80).optional(),
   propertyType: z.enum(["Apartment", "Villa", "Plot"]).optional(),
-  areaType: z.string().optional(),
-  bhk: z.coerce.number().optional(),
-  bath: z.coerce.number().optional(),
+  areaType: z.string().trim().max(80).optional(),
+  bhk: z.coerce.number().int().min(0).max(20).optional(),
+  bath: z.coerce.number().int().min(0).max(20).optional(),
   availabilityStatus: z.enum(["Ready To Move", "Under Construction"]).optional(),
-  minPrice: z.coerce.number().optional(),
-  maxPrice: z.coerce.number().optional(),
-  minSqft: z.coerce.number().optional(),
-  maxSqft: z.coerce.number().optional(),
-  search: z.string().optional(),
-  sort: z.enum(["newest", "price_asc", "price_desc", "sqft_desc", "ppsf_asc"]).default("newest"),
-  page: z.coerce.number().default(1),
-  limit: z.coerce.number().default(12),
+  minPrice: z.coerce.number().finite().min(0).max(1_000_000_000_000).optional(),
+  maxPrice: z.coerce.number().finite().min(0).max(1_000_000_000_000).optional(),
+  minSqft: z.coerce.number().finite().min(0).max(50_000).optional(),
+  maxSqft: z.coerce.number().finite().min(0).max(50_000).optional(),
+  search: z.string().trim().max(100).optional(),
+  sort: listingSortSchema.default("newest"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(12),
+}).strict().superRefine((value, ctx) => {
+  if (value.minPrice !== undefined && value.maxPrice !== undefined && value.minPrice > value.maxPrice) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["minPrice"], message: "minPrice cannot exceed maxPrice" });
+  }
+  if (value.minSqft !== undefined && value.maxSqft !== undefined && value.minSqft > value.maxSqft) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["minSqft"], message: "minSqft cannot exceed maxSqft" });
+  }
 });
+
+export const adminListingQuerySchema = z.object({
+  lifecycle: z.enum(["active", "archived", "all"]).default("all"),
+  sort: listingSortSchema.default("newest"),
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(15),
+}).strict();

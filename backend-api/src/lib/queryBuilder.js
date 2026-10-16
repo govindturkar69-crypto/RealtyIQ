@@ -22,6 +22,18 @@ export function buildListingQuery(q = {}) {
   return filter;
 }
 
+export function activeListingFilter() {
+  return { deletedAt: null };
+}
+
+export function archivedListingFilter() {
+  return { deletedAt: { $type: "date" } };
+}
+
+export function buildActiveListingQuery(q = {}) {
+  return { ...buildListingQuery(q), ...activeListingFilter() };
+}
+
 export function buildSort(sortKey = "newest") {
   switch (sortKey) {
     case "price_asc": return { price: 1 };
@@ -33,9 +45,12 @@ export function buildSort(sortKey = "newest") {
   }
 }
 
-export function paginate({ page = 1, limit = 12 } = {}) {
-  const p = Math.max(1, Number(page) || 1);
-  const l = Math.min(100, Math.max(1, Number(limit) || 12));
+export function paginate(query = {}, { defaultLimit = 12, maxLimit = 100 } = {}) {
+  const { page = 1, limit = defaultLimit } = query;
+  const rawPage = Number(page);
+  const rawLimit = Number(limit);
+  const p = Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+  const l = Number.isSafeInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, maxLimit) : defaultLimit;
   return { page: p, limit: l, skip: (p - 1) * l };
 }
 
