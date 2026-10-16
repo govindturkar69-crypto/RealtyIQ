@@ -17,3 +17,12 @@ export const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
   message: { error: "Too many attempts. Please wait a minute and try again." },
 });
+
+export const predictionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip,
+  message: { error: "Prediction rate limit exceeded" },
+});
