@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildTrendPipeline, buildLocalityRankingPipeline } from "../lib/trends.js";
+import { paginate } from "../lib/queryBuilder.js";
 import { rankingQuerySchema, trendsQuerySchema } from "../validators/trends.schema.js";
 
 test("trend pipeline filters, groups by month, sorts", () => {
@@ -15,8 +16,23 @@ test("trend pipeline filters, groups by month, sorts", () => {
 test("ranking pipeline limits and requires min listings", () => {
   const p = buildLocalityRankingPipeline({ limit: 5 });
   assert.ok(p.some((s) => s.$limit === 5));
-  const match = p.find((s) => s.$match);
+  const match = p.find((s) => s.$match?.listings);
   assert.deepEqual(match.$match.listings, { $gte: 3 });
+  assert.deepEqual(p[0].$match, { deletedAt: null });
+});
+
+test("trend and ranking bounds reject unbounded query values", () => {
+  const trend = buildTrendPipeline({ months: 999999 });
+  const ranking = buildLocalityRankingPipeline({ limit: 999999 });
+  assert.ok(trend[0].$match.listedDate.$gte instanceof Date);
+  assert.equal(ranking.find((s) => "$limit" in s).$limit, 100);
+});
+
+test("admin-style pagination is bounded and normalizes invalid values", () => {
+  assert.deepEqual(paginate({}, { defaultLimit: 20, maxLimit: 100 }), { page: 1, limit: 20, skip: 0 });
+  assert.deepEqual(paginate({ page: "3", limit: "25" }, { defaultLimit: 20, maxLimit: 100 }), { page: 3, limit: 25, skip: 50 });
+  assert.equal(paginate({ page: "2", limit: "999999" }, { defaultLimit: 20, maxLimit: 100 }).limit, 100);
+  assert.deepEqual(paginate({ page: "Infinity", limit: "-1" }, { defaultLimit: 20, maxLimit: 100 }), { page: 1, limit: 20, skip: 0 });
 });
 
 test("trends query schemas allow only bounded supported values", () => {

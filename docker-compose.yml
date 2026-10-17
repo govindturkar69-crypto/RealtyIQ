@@ -28,8 +28,8 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/realtyiq
       - ML_SERVICE_URL=http://ml-service:8001
       - NODE_ENV=production
-      - JWT_ACCESS_SECRET=change_me_access
-      - JWT_REFRESH_SECRET=change_me_refresh
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET before starting Compose}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET before starting Compose}
       - ML_SERVICE_TOKEN=${ML_SERVICE_TOKEN:?Set ML_SERVICE_TOKEN before starting Compose}
       - CORS_ORIGIN=http://localhost:3000
     ports: ["8000:8000"]

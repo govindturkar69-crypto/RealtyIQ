@@ -7,9 +7,9 @@ async function start() {
   try {
     await connectDB();
     const app = createApp();
-    app.listen(env.port, () => logger.info(`backend-api listening on :${env.port} (${env.nodeEnv})`));
+    app.listen(env.port, () => logger.info("api_started", { port: env.port, environment: env.nodeEnv }));
   } catch (e) {
-    logger.error("Fatal startup error:", e.message);
+    logger.error("api_startup_failed", { errorType: e?.name || "Error" });
     process.exit(1);
   }
 }

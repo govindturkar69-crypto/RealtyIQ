@@ -7,4 +7,8 @@ const inquirySchema = new mongoose.Schema({
   status: { type: String, enum: ["new", "contacted", "closed"], default: "new", index: true },
 }, { timestamps: true });
 
+inquirySchema.index({ user: 1, createdAt: -1, _id: -1 });
+inquirySchema.index({ createdAt: -1, _id: -1 });
+inquirySchema.index({ status: 1, createdAt: -1, _id: -1 });
+
 export const Inquiry = mongoose.model("Inquiry", inquirySchema);

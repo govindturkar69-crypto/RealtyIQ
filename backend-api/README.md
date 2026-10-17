@@ -26,7 +26,7 @@ backend-api/src/
 ## Endpoints
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
-| POST | `/api/auth/signup` · `/login` · `/refresh` | – | JWT access+refresh |
+| POST | `/api/auth/signup` · `/login` · `/refresh` | – | Cookie-backed access+refresh (bearer compatibility) |
 | GET/POST | `/api/auth/me` · `/logout` | Bearer | session |
 | GET | `/api/listings` | – | filter, sort, paginate |
 | GET | `/api/listings/:id` | – | detail |
@@ -38,13 +38,14 @@ backend-api/src/
 | GET/POST/DELETE | `/api/saved-searches` | Bearer | filters + match counts |
 | GET | `/api/trends` · `/trends/ranking` | – | price trends, locality ranking |
 | GET | `/api/trends/admin/stats` | admin | admin dashboard stats |
+| GET | `/api/auth/admin/security-events` | admin | durable security/audit events |
 
 ## Run locally
 ```bash
 cp .env.example .env         # set MONGODB_URI, JWT secrets, ML_SERVICE_URL, ML_SERVICE_TOKEN
+npm install
 # Set REALTYIQ_DISPOSABLE_DB=true and
 # REALTYIQ_DISPOSABLE_DB_CONFIRM=DISPOSABLE_REALTYIQ_DATABASE first.
-npm install
 npm run seed                 # local/allowlisted disposable DB only
 npm run bootstrap-admin      # controlled local admin bootstrap only
 npm start                    # http://localhost:8000
@@ -52,7 +53,10 @@ npm test                     # runs lib unit tests (no DB needed)
 ```
 Or `docker compose up` from the repo root (Mongo + ML + API).
 
-Set `BOOTSTRAP_ADMIN_EMAIL` and a unique `BOOTSTRAP_ADMIN_PASSWORD` (16+ characters) before `npm run bootstrap-admin` or `npm run seed`. Set an explicit local/disposable `MONGODB_URI`; production/Atlas targets are rejected. The optional demo account requires `SEED_DEMO_EMAIL` and `SEED_DEMO_PASSWORD`; no credentials are published here.
+Set `BOOTSTRAP_ADMIN_EMAIL` and a unique `BOOTSTRAP_ADMIN_PASSWORD` (16+ characters)
+before `npm run bootstrap-admin` or `npm run seed`. Set an explicit local/disposable
+`MONGODB_URI`; production/Atlas targets are rejected. The optional demo account requires
+`SEED_DEMO_EMAIL` and `SEED_DEMO_PASSWORD`; no credentials are published here.
 
 ## Notes on realness
 - **Trends over time:** the Bengaluru dataset has no timestamps, so the seed assigns

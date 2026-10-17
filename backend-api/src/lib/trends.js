@@ -1,11 +1,14 @@
+import { activeListingFilter } from "./queryBuilder.js";
+
 export function buildTrendPipeline({ locality, propertyType, city, months = 24 } = {}) {
-  const match = {};
+  const safeMonths = Math.min(120, Math.max(1, Number(months) || 24));
+  const match = activeListingFilter();
   if (locality) match.locality = locality;
   if (propertyType) match.propertyType = propertyType;
   if (city) match.city = city;
-  if (months) {
+  if (safeMonths) {
     const from = new Date();
-    from.setMonth(from.getMonth() - Number(months));
+    from.setMonth(from.getMonth() - safeMonths);
     match.listedDate = { $gte: from };
   }
   return [
@@ -31,11 +34,13 @@ export function buildTrendPipeline({ locality, propertyType, city, months = 24 }
 }
 
 export function buildLocalityRankingPipeline({ limit = 10 } = {}) {
+  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 10));
   return [
+    { $match: activeListingFilter() },
     { $group: { _id: "$locality", avgPricePerSqft: { $avg: "$pricePerSqft" }, listings: { $sum: 1 } } },
     { $match: { listings: { $gte: 3 } } },
     { $sort: { avgPricePerSqft: -1 } },
-    { $limit: Number(limit) },
+    { $limit: safeLimit },
     { $project: { _id: 0, locality: "$_id", avgPricePerSqft: { $round: ["$avgPricePerSqft", 0] }, listings: 1 } },
   ];
 }

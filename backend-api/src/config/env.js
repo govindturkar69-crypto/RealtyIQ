@@ -17,6 +17,9 @@ const INSECURE_JWT_VALUES = new Set([
 ]);
 const MIN_SECRET_LENGTH = 32;
 const isInsecureSecret = (value) => INSECURE_JWT_VALUES.has(value) || /^replace_with_/i.test(value) || /change[_-]?me/i.test(value) || /^(.)\1+$/.test(value);
+const configuredTrustProxy = Number(process.env.TRUST_PROXY);
+const positiveInt = (raw, fallback) => Number.isInteger(Number(raw)) && Number(raw) > 0 ? Number(raw) : fallback;
+const configuredCorsOrigin = (process.env.CORS_ORIGIN || "").split(",").map((origin) => origin.trim()).filter(Boolean).join(",");
 
 function required(key, { secret = false } = {}) {
   const val = process.env[key];
@@ -36,7 +39,8 @@ function required(key, { secret = false } = {}) {
 export const env = {
   port: Number(process.env.PORT || 8000),
   nodeEnv: process.env.NODE_ENV || "development",
-  corsOrigin: process.env.CORS_ORIGIN || (isProd ? "" : "*"),
+  corsOrigin: configuredCorsOrigin || (isProd ? "" : "*"),
+  trustProxy: Number.isInteger(configuredTrustProxy) && configuredTrustProxy >= 0 ? configuredTrustProxy : 0,
   mongoUri: required("MONGODB_URI"),
   jwt: {
     accessSecret: required("JWT_ACCESS_SECRET", { secret: true }),
@@ -54,10 +58,12 @@ export const env = {
     windowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 60 * 1000),
     max: Number(process.env.AUTH_RATE_LIMIT_MAX || 5),
   },
-  shareTokenTtlMs: Number(process.env.SHARE_TOKEN_TTL_MS || 7 * 24 * 60 * 60 * 1000),
-  legacyShareGraceMs: Number(process.env.LEGACY_SHARE_GRACE_DAYS || 30) * 24 * 60 * 60 * 1000,
-  predictionRetentionDays: Number(process.env.PREDICTION_RETENTION_DAYS || 365),
-  securityEventRetentionDays: Number(process.env.SECURITY_EVENT_RETENTION_DAYS || 365),
+  savedSearchLimit: positiveInt(process.env.SAVED_SEARCH_MAX, 20),
+  favoriteLimit: Math.min(positiveInt(process.env.FAVORITES_MAX, 100), 100),
+  shareTokenTtlMs: positiveInt(process.env.SHARE_TOKEN_TTL_MS, 7 * 24 * 60 * 60 * 1000),
+  legacyShareGraceMs: positiveInt(process.env.LEGACY_SHARE_GRACE_DAYS, 30) * 24 * 60 * 60 * 1000,
+  predictionRetentionDays: positiveInt(process.env.PREDICTION_RETENTION_DAYS, 365),
+  securityEventRetentionDays: positiveInt(process.env.SECURITY_EVENT_RETENTION_DAYS, 365),
   authCookieOnly: isProd || process.env.AUTH_COOKIE_ONLY === "true",
   isProd,
 };
@@ -66,7 +72,10 @@ if (isProd && env.jwt.accessSecret === env.jwt.refreshSecret) {
   throw new Error("FATAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different in production.");
 }
 
+if (isProd && process.env.TRUST_PROXY && (!Number.isInteger(configuredTrustProxy) || configuredTrustProxy < 0)) {
+  throw new Error("FATAL: TRUST_PROXY must be a non-negative integer in production.");
+}
+
 if (isProd && (env.corsOrigin === "" || env.corsOrigin === "*")) {
-  // eslint-disable-next-line no-console
-  console.warn("[security] CORS_ORIGIN is not restricted in production — set it to your frontend domain.");
+  throw new Error("FATAL: CORS_ORIGIN must be explicitly restricted in production.");
 }

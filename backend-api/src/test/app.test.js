@@ -11,7 +11,7 @@ test("HTTP health and protected route boundaries", async () => {
     const health = await fetch(`${base}/health`);
     assert.equal(health.status, 200);
     assert.equal((await health.json()).service, "backend-api");
-    for (const path of ["/api/predict/history", "/api/auth/admin/users"]) {
+    for (const path of ["/api/predict/history", "/api/auth/admin/users", "/api/inquiries/admin", "/api/auth/admin/security-events", "/api/listings/admin"]) {
       assert.equal((await fetch(`${base}${path}`)).status, 401);
     }
   } finally {
@@ -33,6 +33,54 @@ test("public listing detail routes reject malformed identifiers before controlle
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("readiness follows the Mongoose connection state without exposing diagnostics", async () => {
+  const server = createApp().listen(0);
+  await new Promise((resolve) => server.once("listening", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const originalState = mongoose.connection.readyState;
+  try {
+    for (const [state, expectedStatus, expectedBody] of [
+      [mongoose.STATES.connected, 200, "ready"],
+      [mongoose.STATES.disconnected, 503, "not_ready"],
+      [mongoose.STATES.connecting, 503, "not_ready"],
+      [mongoose.STATES.disconnecting, 503, "not_ready"],
+      [mongoose.STATES.uninitialized, 503, "not_ready"],
+    ]) {
+      mongoose.connection.readyState = state;
+      const response = await fetch(`${base}/ready`);
+      assert.equal(response.status, expectedStatus);
+      assert.deepEqual(await response.json(), { status: expectedBody });
+      assert.match(response.headers.get("x-request-id"), /^[A-Za-z0-9._:-]+$/);
+    }
+    mongoose.connection.readyState = 0;
+    const health = await fetch(`${base}/health`);
+    assert.equal(health.status, 200);
+    assert.equal((await health.json()).service, "backend-api");
+    const body = await (await fetch(`${base}/ready`)).text();
+    assert.doesNotMatch(body, /mongodb|mongodb\+srv|password|secret|stack|topology|driver/i);
+  } finally {
+    mongoose.connection.readyState = originalState;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("cookie-authenticated state changes require CSRF proof", async () => {
+  const server = createApp().listen(0);
+  await new Promise((resolve) => server.once("listening", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const response = await fetch(`${base}/api/auth/logout`, {
+      method: "POST",
+      headers: { Cookie: "riq_access=placeholder" },
+      body: "{}",
+    });
+    assert.equal(response.status, 403);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("CSRF bootstrap returns a stable browser token without auth credentials", async () => {
   const server = createApp().listen(0);
   await new Promise((resolve) => server.once("listening", resolve));
@@ -57,30 +105,6 @@ test("CSRF bootstrap returns a stable browser token without auth credentials", a
     });
     assert.equal(protectedRequest.status, 401);
   } finally {
-    await new Promise((resolve) => server.close(resolve));
-  }
-});
-
-test("readiness follows the Mongoose connection state without exposing diagnostics", async () => {
-  const server = createApp().listen(0);
-  await new Promise((resolve) => server.once("listening", resolve));
-  const base = `http://127.0.0.1:${server.address().port}`;
-  const originalState = mongoose.connection.readyState;
-  try {
-    for (const [state, expectedStatus, expectedBody] of [
-      [mongoose.STATES.connected, 200, "ready"],
-      [mongoose.STATES.connecting, 503, "not_ready"],
-      [mongoose.STATES.disconnecting, 503, "not_ready"],
-      [mongoose.STATES.disconnected, 503, "not_ready"],
-      [mongoose.STATES.uninitialized, 503, "not_ready"],
-    ]) {
-      mongoose.connection.readyState = state;
-      const response = await fetch(`${base}/ready`);
-      assert.equal(response.status, expectedStatus);
-      assert.deepEqual(await response.json(), { status: expectedBody });
-    }
-  } finally {
-    mongoose.connection.readyState = originalState;
     await new Promise((resolve) => server.close(resolve));
   }
 });

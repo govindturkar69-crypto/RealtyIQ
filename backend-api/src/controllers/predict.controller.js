@@ -6,6 +6,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { Listing } from "../models/Listing.js";
 import { env } from "../config/env.js";
 import { createShareToken, hashToken } from "../utils/tokenHash.js";
+import { activeListingFilter } from "../lib/queryBuilder.js";
 
 const predictionInputFields = ["location", "area_type", "availability_status", "total_sqft", "bhk", "bath", "balcony"];
 
@@ -53,7 +54,7 @@ function predictionDetailDto(record) {
 }
 
 export const predict = asyncHandler(async (req, res) => {
-  const result = await mlService.predict(req.body);
+  const result = await mlService.predict(req.body, req.id);
   const share = createShareToken(env.shareTokenTtlMs);
   const record = await Prediction.create({
     user: req.user?.sub,
@@ -78,14 +79,14 @@ export const predict = asyncHandler(async (req, res) => {
 
 export const featureImportance = asyncHandler(async (req, res) => {
   const top = Number(req.query.top || 15);
-  res.json(await mlService.featureImportance(top));
+  res.json(await mlService.featureImportance(top, req.id));
 });
 
 export const options = asyncHandler(async (req, res) => {
   try {
-    res.json(await mlService.localities());
+    res.json(await mlService.localities(req.id));
   } catch {
-    const location = (await Listing.distinct("locality")).sort();
+    const location = (await Listing.distinct("locality", activeListingFilter())).sort();
     res.json({ categorical: {
       location,
       area_type: ["Built-up Area", "Carpet Area", "Plot Area", "Super built-up Area"],
@@ -148,9 +149,9 @@ export const getPredictionById = asyncHandler(async (req, res) => {
     predicted_price: record.predictedPrice,
     confidence_low: record.confidenceLow,
     confidence_high: record.confidenceHigh,
-    price_per_sqft: record.pricePerSqft,
-    model_name: record.modelName,
-    locality: record.locality,
+    price_per_sqft: pricePerSqft(record),
+    model_name: record.modelName || "Model details unavailable",
+    locality: record.locality || record.input?.location,
     createdAt: record.createdAt,
   });
 });

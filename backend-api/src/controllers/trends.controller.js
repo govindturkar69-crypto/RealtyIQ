@@ -4,6 +4,7 @@ import { User } from "../models/User.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { buildTrendPipeline, buildLocalityRankingPipeline } from "../lib/trends.js";
 import { mlService } from "../services/ml.service.js";
+import { activeListingFilter } from "../lib/queryBuilder.js";
 
 export const priceTrends = asyncHandler(async (req, res) => {
   const series = await Listing.aggregate(buildTrendPipeline({
@@ -20,7 +21,7 @@ export const localityRanking = asyncHandler(async (req, res) => {
 
 export const adminStats = asyncHandler(async (req, res) => {
   const [listings, predictions, users, topSearched] = await Promise.all([
-    Listing.countDocuments(),
+    Listing.countDocuments(activeListingFilter()),
     Prediction.countDocuments(),
     User.countDocuments(),
     Prediction.aggregate([
@@ -35,7 +36,7 @@ export const adminStats = asyncHandler(async (req, res) => {
 
 export const mlStatus = asyncHandler(async (req, res) => {
   try {
-    const [health, info] = await Promise.all([mlService.health(), mlService.modelInfo()]);
+    const [health, info] = await Promise.all([mlService.health(req.id), mlService.modelInfo(req.id)]);
     res.json({ online: true, ...health, ...info });
   } catch {
     res.json({ online: false, model_loaded: false });

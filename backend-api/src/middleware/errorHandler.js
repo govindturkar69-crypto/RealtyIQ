@@ -1,5 +1,5 @@
 import { ApiError } from "../utils/ApiError.js";
-import { logger } from "../utils/logger.js";
+import { logger, safePath } from "../utils/logger.js";
 import { env } from "../config/env.js";
 
 export function notFound(req, res, next) {
@@ -19,7 +19,13 @@ export function errorHandler(err, req, res, next) {
   if (err.name === "TokenExpiredError") { status = 401; message = "Token expired"; }
 
   if (status >= 500) {
-    logger.error(`[${req.id}]`, err.stack || err);
+    logger.error("http_request_error", {
+      requestId: req.id,
+      method: req.method,
+      path: safePath(req.path),
+      status,
+      errorType: err.mlFailure || err.name || "internal_error",
+    });
     if (env.isProd) message = "Internal server error";
   }
   res.status(status).json({ error: message, ...(details ? { details } : {}), requestId: req.id });

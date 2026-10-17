@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { validate } from "../middleware/validate.js";
 import { authenticate, optionalAuth, requireRole } from "../middleware/auth.js";
+import { predictionLimiter } from "../middleware/rateLimiters.js";
 import { predictSchema } from "../validators/predict.schema.js";
 import { objectIdParamSchema } from "../validators/params.schema.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -18,7 +19,7 @@ const privateNoStore = (req, res, next) => {
   next();
 };
 
-router.post("/", optionalAuth, validate(predictSchema), predict);
+router.post("/", predictionLimiter, optionalAuth, validate(predictSchema), predict);
 router.post("/:id/share", authenticate, requireRole("user", "admin"), sharePrediction);
 router.delete("/:id/share", authenticate, requireRole("user", "admin"), revokeShare);
 router.get("/feature-importance", featureImportance);

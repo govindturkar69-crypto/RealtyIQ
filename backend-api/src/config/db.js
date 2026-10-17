@@ -5,7 +5,7 @@ import { logger } from "../utils/logger.js";
 export async function connectDB(uri = env.mongoUri) {
   mongoose.set("strictQuery", true);
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
-  logger.info(`MongoDB connected: ${mongoose.connection.host}`);
+  logger.info("database_connected");
   return mongoose.connection;
 }
 

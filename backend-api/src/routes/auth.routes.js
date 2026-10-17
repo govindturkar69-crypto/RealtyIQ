@@ -3,12 +3,14 @@ import { validate } from "../middleware/validate.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimiters.js";
 import { signupSchema, loginSchema, refreshSchema, updateProfileSchema, changePasswordSchema, manageUserSchema } from "../validators/auth.schema.js";
-import { csrf, signup, login, refresh, me, updateProfile, changePassword, logout, deleteAccount, listUsers, manageUser } from "../controllers/auth.controller.js";
+import { objectIdParamSchema } from "../validators/params.schema.js";
+import { securityEventQuerySchema } from "../validators/adminQueue.schema.js";
+import { csrf, signup, login, refresh, me, updateProfile, changePassword, logout, deleteAccount, listUsers, manageUser, listSecurityEvents } from "../controllers/auth.controller.js";
 
 const router = Router();
+router.get("/csrf", csrf);
 router.post("/signup", authLimiter, validate(signupSchema), signup);
 router.post("/login", authLimiter, validate(loginSchema), login);
-router.get("/csrf", csrf);
 router.post("/refresh", authLimiter, validate(refreshSchema), refresh);
 router.get("/me", authenticate, me);
 router.patch("/me", authenticate, validate(updateProfileSchema), updateProfile);
@@ -16,5 +18,6 @@ router.patch("/password", authenticate, validate(changePasswordSchema), changePa
 router.delete("/me", authenticate, deleteAccount);
 router.post("/logout", authenticate, logout);
 router.get("/admin/users", authenticate, requireRole("admin"), listUsers);
-router.patch("/admin/users/:id", authenticate, requireRole("admin"), validate(manageUserSchema), manageUser);
+router.patch("/admin/users/:id", authenticate, requireRole("admin"), validate(objectIdParamSchema, "params"), validate(manageUserSchema), manageUser);
+router.get("/admin/security-events", authenticate, requireRole("admin"), validate(securityEventQuerySchema, "query"), listSecurityEvents);
 export default router;

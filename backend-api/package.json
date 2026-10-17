@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/seed/seed.js",
+    "bootstrap-admin": "node src/scripts/bootstrap-admin.js",
     "test": "node --test"
   },
   "engines": { "node": ">=18" },
