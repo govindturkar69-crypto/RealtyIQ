@@ -56,3 +56,42 @@ export const inquiriesResponseSchema = z.object({
   total: z.number().int().min(0),
   totalPages: z.number().int().min(0),
 }).passthrough();
+
+export const adminUserRoleSchema = z.enum(["user", "agent", "broker", "admin"]);
+
+export const adminUserSchema = z.object({
+  _id: objectId,
+  name: z.string(),
+  email: z.string(),
+  role: adminUserRoleSchema,
+  isActive: z.boolean(),
+  createdAt: z.string().optional(),
+}).passthrough();
+
+export const adminUsersPaginatedSchema = z.object({
+  items: z.array(adminUserSchema),
+  page: z.number().int().min(1).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  total: z.number().int().min(0).optional(),
+  totalPages: z.number().int().min(0).optional(),
+}).passthrough();
+
+export const adminUsersLegacySchema = z.object({
+  users: z.array(adminUserSchema),
+}).passthrough();
+
+export const adminUsersResponseSchema = z.union([
+  adminUsersPaginatedSchema,
+  adminUsersLegacySchema.transform((val) => ({
+    items: val.users,
+    page: 1,
+    limit: val.users.length,
+    total: val.users.length,
+    totalPages: 1,
+  })),
+]);
+
+export function safelyParseAdminUsers(payload: unknown): { items: z.infer<typeof adminUserSchema>[] } | null {
+  const result = adminUsersResponseSchema.safeParse(payload);
+  return result.success ? result.data : null;
+}

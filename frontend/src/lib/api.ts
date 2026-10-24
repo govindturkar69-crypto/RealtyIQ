@@ -1,5 +1,5 @@
 "use client";
-import type { AuthResponse, PredictionResult, UserRole } from "./types";
+import type { AuthResponse, Paginated, PredictionResult, User, UserRole } from "./types";
 
 const BASE = "";
 // Covers the API's bounded ML call (up to 8s) plus normal browser/network overhead.
@@ -202,7 +202,7 @@ export const api = {
   changePassword: (currentPassword: string, newPassword: string) => apiFetch("/api/auth/password", { method: "PATCH", body: JSON.stringify({ currentPassword, newPassword }) }),
   logout: () => apiFetch("/api/auth/logout", { method: "POST", body: refreshToken ? JSON.stringify({ refreshToken }) : undefined }, false).then((result) => { clearCsrfToken(); return result; }),
   deleteAccount: () => apiFetch("/api/auth/me", { method: "DELETE" }),
-  users: () => apiFetch("/api/auth/admin/users"),
+  users: (page = 1, limit = 20) => apiFetch<Paginated<User>>(`/api/auth/admin/users?page=${page}&limit=${limit}`),
   manageUser: (id: string, patch: { role?: UserRole; isActive?: boolean }) =>
     apiFetch(`/api/auth/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   predict: (b: Record<string, unknown>) => apiFetch<PredictionResult>("/api/predict", { method: "POST", body: JSON.stringify(b) }),
@@ -213,6 +213,8 @@ export const api = {
   listings: (qs: string) => apiFetch(`/api/listings${qs}`),
   listingLocalities: () => apiFetch<{ localities: string[] }>("/api/listings/meta/localities"),
   listing: (id: string) => apiFetch(`/api/listings/${id}`),
+  adminListings: (lifecycle: "active" | "archived" | "all" = "all", page = 1, limit = 15) =>
+    apiFetch(`/api/listings/admin?lifecycle=${lifecycle}&page=${page}&limit=${limit}&sort=newest`),
   trends: (qs: string) => apiFetch(`/api/trends${qs}`),
   ranking: () => apiFetch("/api/trends/ranking"),
   compare: (ids: string[]) => apiFetch("/api/compare", { method: "POST", body: JSON.stringify({ listingIds: ids }) }),
@@ -226,15 +228,25 @@ export const api = {
   createListing: (b: unknown) => apiFetch("/api/listings", { method: "POST", body: JSON.stringify(b) }),
   updateListing: (id: string, b: unknown) => apiFetch(`/api/listings/${id}`, { method: "PATCH", body: JSON.stringify(b) }),
   deleteListing: (id: string) => apiFetch(`/api/listings/${id}`, { method: "DELETE" }),
+  restoreListing: (id: string) => apiFetch(`/api/listings/${id}/restore`, { method: "PATCH" }),
   importListings: (csv: string) => apiFetch<{ imported: number }>("/api/listings/import", { method: "POST", headers: { "Content-Type": "text/csv" }, body: csv }),
   markSavedNotified: (id: string) => apiFetch(`/api/saved-searches/${id}/mark-notified`, { method: "POST" }),
-  favorites: () => apiFetch("/api/favorites"),
+  favorites: (page = 1, limit = 24) => apiFetch(`/api/favorites?page=${page}&limit=${limit}`),
   favoriteIds: () => apiFetch("/api/favorites/ids"),
   addFavorite: (id: string) => apiFetch(`/api/favorites/${id}`, { method: "POST" }),
   removeFavorite: (id: string) => apiFetch(`/api/favorites/${id}`, { method: "DELETE" }),
   getPrediction: (id: string) => apiFetch<unknown>(`/api/predict/${encodeURIComponent(id)}`),
-  inquiries: () => apiFetch("/api/inquiries"),
+  inquiries: (page = 1, limit = 20) => apiFetch(`/api/inquiries?page=${page}&limit=${limit}`),
   createInquiry: (listingId: string, message: string) => apiFetch("/api/inquiries", { method: "POST", body: JSON.stringify({ listingId, message }) }),
-  adminInquiries: () => apiFetch("/api/inquiries/admin"),
+  adminInquiries: (page = 1, limit = 20, status?: "new" | "contacted" | "closed") => {
+    const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (status) query.set("status", status);
+    return apiFetch(`/api/inquiries/admin?${query.toString()}`);
+  },
+  securityEvents: (page = 1, limit = 20, filters: Record<string, string> = {}) => {
+    const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+    Object.entries(filters).forEach(([key, value]) => { if (value) query.set(key, value); });
+    return apiFetch(`/api/auth/admin/security-events?${query.toString()}`);
+  },
   updateInquiry: (id: string, status: "new" | "contacted" | "closed") => apiFetch(`/api/inquiries/admin/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
 };

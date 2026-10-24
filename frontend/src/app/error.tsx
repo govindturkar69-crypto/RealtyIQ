@@ -1,11 +1,22 @@
 "use client";
 
+import { useEffect } from "react";
+
 type ErrorBoundaryProps = {
   error: Error & { digest?: string };
   reset: () => void;
 };
 
-export default function Error({ reset }: ErrorBoundaryProps) {
+export default function Error({ error, reset }: ErrorBoundaryProps) {
+  useEffect(() => {
+    // Log uncaught error to client console for diagnostics without exposing sensitive data in UI
+    console.error("Unhandled client error caught by boundary:", error);
+  }, [error]);
+
+  const safeDigest = typeof error?.digest === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(error.digest)
+    ? error.digest
+    : null;
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-16">
       <section
@@ -19,6 +30,11 @@ export default function Error({ reset }: ErrorBoundaryProps) {
         <p className="mt-3 text-sm text-muted-foreground">
           An unexpected error occurred. You can try again.
         </p>
+        {safeDigest && (
+          <p className="mt-2 text-xs font-mono text-muted-foreground">
+            Error reference: {safeDigest}
+          </p>
+        )}
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
           <button
             type="button"
