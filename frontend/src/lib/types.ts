@@ -10,6 +10,7 @@ export interface Listing {
   balcony: number; price: number; pricePerSqft: number;
   location?: { lat: number; lng: number } | null; images: string[];
   description: string; listedDate: string;
+  deletedAt?: string | null;
 }
 
 export interface Paginated<T> { items: T[]; page: number; limit: number; total: number; totalPages: number; }
@@ -67,8 +68,26 @@ export type SavedSearch = ActiveSavedSearch | QuarantinedSavedSearch;
 
 export interface Inquiry {
   _id: string; message: string; status: "new" | "contacted" | "closed"; createdAt: string;
-  listing: Pick<Listing, "_id" | "title" | "locality">;
+  listing: Pick<Listing, "_id" | "title" | "locality"> | null;
   user?: Pick<User, "_id" | "name" | "email">;
+}
+
+export interface SecurityEvent {
+  _id: string;
+  type: string;
+  user?: string;
+  actorUserId?: string | null;
+  targetUserId?: string | null;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  action?: string | null;
+  result?: "success" | "failure" | "denied" | null;
+  reasonCode?: string | null;
+  requestId?: string;
+  ip?: string;
+  userAgent?: string;
+  metadata?: Record<string, string | number | boolean | undefined>;
+  createdAt: string;
 }
 
 export interface RankingItem { locality: string; avgPricePerSqft: number; listings: number; }
